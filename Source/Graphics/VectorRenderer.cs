@@ -294,5 +294,67 @@ public static class VectorRenderer
         // Text
         FontManager.Instance.DrawText(fullText, new Vector2(bubble.X + 8f, bubble.Y + 4f), 14f, border);
     }
+
+    public static void DrawCloseCross(Vector2 center, float size, Color color, float thickness = 2.0f)
+    {
+        float half = size * 0.5f;
+        Raylib.DrawLineEx(new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half), thickness, color);
+        Raylib.DrawLineEx(new Vector2(center.X + half, center.Y - half), new Vector2(center.X - half, center.Y + half), thickness, color);
+    }
+
+    public static void DrawCheckmark(Vector2 center, float size, Color color, float thickness = 2.0f)
+    {
+        Vector2 start = new(center.X - size * 0.45f, center.Y);
+        Vector2 mid = new(center.X - size * 0.1f, center.Y + size * 0.35f);
+        Vector2 end = new(center.X + size * 0.45f, center.Y - size * 0.45f);
+        Raylib.DrawLineEx(start, mid, thickness, color);
+        Raylib.DrawLineEx(mid, end, thickness, color);
+    }
+
+    public static void DrawFivePointStar(Vector2 center, float radius, Color fillColor, Color? outlineColor = null, float outlineWidth = 1.5f)
+    {
+        Span<Vector2> points = stackalloc Vector2[10];
+        float innerRadius = radius * 0.42f;
+        float angleStep = MathF.PI / 5f;
+        float startAngle = -MathF.PI * 0.5f;
+
+        for (int i = 0; i < 10; i++)
+        {
+            float r = (i % 2 == 0) ? radius : innerRadius;
+            float angle = startAngle + i * angleStep;
+            points[i] = new Vector2(center.X + MathF.Cos(angle) * r, center.Y + MathF.Sin(angle) * r);
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            int next = (i + 1) % 10;
+            Raylib.DrawTriangle(center, points[i], points[next], fillColor);
+        }
+
+        if (outlineColor.HasValue && outlineWidth > 0f)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                int next = (i + 1) % 10;
+                Raylib.DrawLineEx(points[i], points[next], outlineWidth, outlineColor.Value);
+            }
+        }
+    }
+
+    public static void DrawEnvelopeIcon(Vector2 center, float width, float height, Color bodyColor, Color flapColor, Color outlineColor)
+    {
+        Rectangle envRect = new(center.X - width * 0.5f, center.Y - height * 0.5f, width, height);
+        Raylib.DrawRectangleRec(envRect, bodyColor);
+        Raylib.DrawRectangleLinesEx(envRect, 1.2f, outlineColor);
+
+        // Flap lines
+        Vector2 topLeft = new(envRect.X, envRect.Y);
+        Vector2 topRight = new(envRect.X + envRect.Width, envRect.Y);
+        Vector2 flapTip = new(center.X, center.Y + 2f);
+
+        Raylib.DrawTriangle(topLeft, flapTip, topRight, flapColor);
+        Raylib.DrawLineEx(topLeft, flapTip, 1.2f, outlineColor);
+        Raylib.DrawLineEx(topRight, flapTip, 1.2f, outlineColor);
+    }
 }
 

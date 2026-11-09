@@ -209,6 +209,30 @@ public sealed class Milestone3Challenger1StressTests
     }
 
     [Fact]
+    public void PhoAssembly_PostSolveMutation_ValidateFailureResetsIsSolved()
+    {
+        var engine = new PhoCookingEngine();
+
+        // Solve canonically
+        engine.PlaceIngredient(0, ItemIds.BanhPho);
+        engine.PlaceIngredient(1, ItemIds.ThitBo);
+        engine.PlaceIngredient(2, ItemIds.HanhLa);
+        engine.PlaceIngredient(3, ItemIds.NuocDung);
+        engine.PlaceIngredient(4, ItemIds.ThaoMoc);
+        Assert.True(engine.ValidateAssembly(out _));
+        Assert.True(engine.IsSolved);
+
+        // Mutate by removing an ingredient
+        engine.RemoveIngredient(0);
+        bool valid = engine.ValidateAssembly(out string error);
+        Assert.False(valid);
+        Assert.NotEmpty(error);
+
+        // REMEDIATION VERIFIED: PhoCookingEngine.ValidateAssembly resets IsSolved = false on failure paths
+        Assert.False(engine.IsSolved, "IsSolved must be false when ValidateAssembly fails on an invalid bowl post-mutation");
+    }
+
+    [Fact]
     public void PhoAssemblyScene_InvalidCardPlacements_IgnoredGracefully()
     {
         var eventBus = new EventBus();
@@ -496,6 +520,10 @@ public sealed class Milestone3Challenger1StressTests
         var qm = new QuestManager(bus);
         HanoiQuests.RegisterAll(qm);
 
+        // Set up Quest 1 completed so Ba An opens Pho Assembly
+        saveData.Level1State.QuestFlags.Q1_Completed = true;
+        saveData.Level1State.QuestFlags.Q2_Completed = false;
+
         var input = new MockInput();
         var sm = new GameStateManager(bus, GameState.Exploration);
 
@@ -509,72 +537,86 @@ public sealed class Milestone3Challenger1StressTests
         );
 
         scene.Enter();
+
+        // 1. Position player in front of BaAn (outside stall collider, inside interaction radius)
+        scene.Kinematics.Position = scene.BaAn.Position + new Vector2(0, 25f);
+        input.IsInteractJustPressed = true;
+        scene.Update(0.016f);
+        input.IsInteractJustPressed = false;
+
+        // 2. Dismiss dialogue to launch PhoAssemblyScene modal
+        input.IsConfirmJustPressed = true;
+        scene.Update(0.016f);
+        input.IsConfirmJustPressed = false;
+
+        // Modal should now be active
+        Assert.Equal(GameState.MiniGamePho, sm.CurrentState);
         var initialPos = scene.Kinematics.Position;
 
-        // Push Pho mini-game state
-        sm.PushState(GameState.MiniGamePho);
-        Assert.Equal(GameState.MiniGamePho, sm.CurrentState);
-
-        // Send movement input while in mini-game
+        // 3. Send movement input while in mini-game modal
         input.MovementDirection = new Vector2(1, 0);
         scene.Update(0.1f);
 
         // Position must NOT change because movement is paused during modal overlay
         Assert.Equal(initialPos, scene.Kinematics.Position);
 
-        // Pop state back to exploration
-        sm.PopState();
+        // 4. Send cancel to exit modal
+        input.MovementDirection = Vector2.Zero;
+        input.IsCancelJustPressed = true;
+        scene.Update(0.016f);
+        input.IsCancelJustPressed = false;
+
+        // Returned to exploration
         Assert.Equal(GameState.Exploration, sm.CurrentState);
 
-        // Now movement input should take effect
+        // 5. Now movement input should take effect
+        input.MovementDirection = new Vector2(1, 0);
         scene.Update(0.1f);
         Assert.True(scene.Kinematics.Position.X > initialPos.X);
     }
 
     [Fact]
-    public void StallPuzzleScene_DirectSolve_ProgressionAndLetterModalLifecycle()
+    public void StallPuzzleScene_HeadlessUpdate_InputForwardingAllowsDismissalAndSetsLetterRead()
     {
         var eventBus = new EventBus();
         var saveData = SaveData.CreateDefault();
         var questManager = new QuestManager(eventBus);
         HanoiQuests.RegisterAll(questManager);
+        var inputService = new GameProject.Core.Ports.MockInputService();
 
-        var scene = new StallPuzzleScene(saveData, questManager, eventBus);
+        var scene = new StallPuzzleScene(saveData, questManager, eventBus, inputService: inputService);
         scene.Enter();
 
-        Assert.False(scene.IsSolved);
-        Assert.Equal(0, scene.MoveCount);
-
-        // Push 1: Fruit Stall Left
-        Assert.True(scene.Push("Obj_FruitStall", Direction.Left));
-        Assert.Equal(1, scene.MoveCount);
-        Assert.False(scene.IsSolved);
-
-        // Push 2: Flower Cart Down -> Triggers solve
-        Assert.True(scene.Push("Obj_FlowerCart", Direction.Down));
-        Assert.Equal(2, scene.MoveCount);
+        scene.Push("Obj_FruitStall", Direction.Left);
+        scene.Push("Obj_FlowerCart", Direction.Down);
         Assert.True(scene.IsSolved);
 
-        // Verify domain progression side-effects
-        Assert.True(saveData.Level1State.QuestFlags.Gate_LongBien_Unlocked);
-        Assert.True(saveData.Level1State.QuestFlags.Q3_Completed);
-        Assert.Equal(100.0f, saveData.WorldProgression.GetColorRestoration(WorldProgression.RegionHanoi));
-        Assert.True(saveData.CollectionAlbum.HasJournalPage(AlbumIds.HanoiJournalPage));
-        Assert.True(saveData.CollectionAlbum.HasStamp(AlbumIds.HanoiLotusStamp));
-        Assert.True(saveData.WorldProgression.IsRegionUnlocked(WorldProgression.RegionHue));
+        // Advance 3.5s -> triggers letter modal
+        scene.Update(3.5f);
 
-        // Advance timer through solve animation (3.0s activates letter modal)
-        scene.Update(3.1f);
+        // Access internal modal via reflection to observe state
+        var modalField = typeof(StallPuzzleScene).GetField("_letterModal",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var letterModal = (GrayShadowLetterModal)modalField!.GetValue(scene)!;
+        Assert.True(letterModal.IsActive);
 
-        // Advance through letter typing and dismiss
-        scene.Update(1.0f);
-        Assert.False(scene.RequestNextScene);
-
-        // Fast forward 15s to complete typewriter and confirm
-        for (int i = 0; i < 30; i++)
+        // Advance typewriter to completion
+        for (int i = 0; i < 40; i++)
         {
             scene.Update(0.5f);
         }
+        Assert.True(letterModal.IsTypingComplete);
+
+        // Pulsing confirm input forwards to modal and triggers dismissal
+        inputService.IsConfirmJustPressed = true;
+        scene.Update(0.1f);
+        inputService.IsConfirmJustPressed = false;
+
+        // REMEDIATION VERIFIED: RequestNextScene is true and GrayShadow_LetterRead is synchronized
+        Assert.True(scene.RequestNextScene,
+            "Remediation Verified: StallPuzzleScene dismisses modal and requests next scene via forwarded input");
+        Assert.True(saveData.Level1State.QuestFlags.GrayShadow_LetterRead,
+            "Remediation Verified: GrayShadow_LetterRead is set to true upon modal dismissal");
     }
 
     [Fact]

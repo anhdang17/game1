@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using GameProject.Core.Events;
+using GameProject.Core.Hints;
 using GameProject.Core.Models;
 using GameProject.Core.Ports;
 using GameProject.Core.Puzzles;
@@ -25,6 +26,7 @@ public sealed class StallPuzzleScene : IScene
     private readonly QuestManager _questManager;
     private readonly IEventBus _eventBus;
     private readonly IAudioService? _audioService;
+    private readonly IInputService? _inputService;
     private readonly LevelProgressionService _progression;
     private readonly SpatialGridEngine _grid = new();
     private readonly GrayShadowLetterModal _letterModal = new();
@@ -72,12 +74,14 @@ public sealed class StallPuzzleScene : IScene
         SaveData saveData,
         QuestManager questManager,
         IEventBus eventBus,
-        IAudioService? audioService = null)
+        IAudioService? audioService = null,
+        IInputService? inputService = null)
     {
         _saveData = saveData ?? throw new ArgumentNullException(nameof(saveData));
         _questManager = questManager ?? throw new ArgumentNullException(nameof(questManager));
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         _audioService = audioService;
+        _inputService = inputService;
         _progression = new LevelProgressionService(_saveData, _eventBus);
     }
 
@@ -96,11 +100,24 @@ public sealed class StallPuzzleScene : IScene
 
         if (_letterModal.IsActive)
         {
-            _letterModal.Update(dt);
+            _letterModal.Update(dt,
+                isConfirmPressed: _inputService?.IsConfirmJustPressed ?? false,
+                isSkipPressed: _inputService?.IsCancelJustPressed ?? false);
             if (_letterModal.RequestClose)
             {
+                _saveData.Level1State.QuestFlags.GrayShadow_LetterRead = true;
+                _eventBus.Publish(new CutsceneEndedEvent("GrayShadow_Letter"));
+                _eventBus.Publish(new LetterOpenedEvent("Letter_GrayShadow_Hanoi", "Bóng Xám"));
                 RequestNextScene = true;
             }
+            return;
+        }
+        else if (_letterModal.RequestClose && !_saveData.Level1State.QuestFlags.GrayShadow_LetterRead)
+        {
+            _saveData.Level1State.QuestFlags.GrayShadow_LetterRead = true;
+            _eventBus.Publish(new CutsceneEndedEvent("GrayShadow_Letter"));
+            _eventBus.Publish(new LetterOpenedEvent("Letter_GrayShadow_Hanoi", "Bóng Xám"));
+            RequestNextScene = true;
             return;
         }
 
@@ -207,10 +224,12 @@ public sealed class StallPuzzleScene : IScene
             ResetGrid();
         }
 
-        if (Raylib.IsKeyPressed(KeyboardKey.H))
+        if ((_inputService != null && _inputService.IsHintJustPressed) || (Raylib.IsWindowReady() && Raylib.IsKeyPressed(KeyboardKey.H)))
         {
-            _hintMessage = "Gợi ý: Đẩy sạp hoa quả sang trái, rồi kéo xe hoa xuống dưới.";
+            var hintMgr = new HintManager();
+            _hintMessage = hintMgr.GetStallPuzzleHint(_grid.IsPathClear(), _moveCount);
             _hintTimer = 6f;
+            _audioService?.PlaySfx(SfxType.DialogueBlip);
         }
     }
 
@@ -320,7 +339,7 @@ public sealed class StallPuzzleScene : IScene
                 }
                 if (isExit)
                 {
-                    string xLabel = _solved ? "⭐" : "Cầu";
+                    string xLabel = _solved ? "Đích" : "Cầu";
                     FontManager.Instance.DrawText(xLabel, new Vector2(x + 10f, y + CellSize / 2f - 7f), 11f,
                         new Color(140, 90, 20, 255));
                 }
@@ -423,11 +442,19 @@ public sealed class StallPuzzleScene : IScene
             }
         }
 
-        string pathText = _pathClear ? "✓ Đường thông! Cổng Cầu Long Biên đã mở" : "✗ Đường bị chặn";
+        string pathText = _pathClear ? "Đường thông! Cổng Cầu Long Biên đã mở" : "Đường bị chặn";
         Color pathColor = _pathClear ? new Color(46, 160, 67, 255) : new Color(200, 60, 40, 255);
         Vector2 pSz = FontManager.Instance.MeasureText(pathText, 15f);
-        float px = GridOriginX + _grid.Width * CellSize / 2f - pSz.X / 2f;
+        float px = GridOriginX + _grid.Width * CellSize / 2f - pSz.X / 2f + 10f;
         float py = GridOriginY + _grid.Height * CellSize + 12f;
+        if (_pathClear)
+        {
+            VectorRenderer.DrawCheckmark(new Vector2(px - 14f, py + 8f), 12f, pathColor);
+        }
+        else
+        {
+            VectorRenderer.DrawCloseCross(new Vector2(px - 14f, py + 8f), 10f, pathColor);
+        }
         FontManager.Instance.DrawTextOutline(pathText, new Vector2(px, py), 15f, pathColor, Color.White, 1.5f);
     }
 
@@ -481,7 +508,7 @@ public sealed class StallPuzzleScene : IScene
 
         if (_solveTimer > 0.4f)
         {
-            string msg1 = "🌉 Cổng Cầu Long Biên đã mở!";
+            string msg1 = "Cổng Cầu Long Biên đã mở!";
             string msg2 = $"Hà Nội đã hồi sinh 100% sắc màu! ({_moveCount} bước)";
             string msg3 = "Mây và Bút Chì nhận được Trang Sổ Khởi Đầu và Tem Hoa Sen!";
 

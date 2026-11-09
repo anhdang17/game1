@@ -26,12 +26,58 @@ public sealed class FontManager : IDisposable
 
     /// <summary>
     /// Normalizes Unicode string to Form C (canonical composition) to ensure decomposed NFD
-    /// characters (e.g. from macOS/clipboard) resolve to precomposed Vietnamese font glyphs.
+    /// characters resolve to precomposed Vietnamese font glyphs, and maps UI symbols to clean
+    /// text equivalents so missing glyph boxes ('?') never appear.
     /// </summary>
     public static string NormalizeText(string? text)
     {
         if (string.IsNullOrEmpty(text)) return string.Empty;
-        return text.Normalize(NormalizationForm.FormC);
+        string normalized = text.Normalize(NormalizationForm.FormC);
+
+        // Sanitize any remaining unicode symbols or emoji to clean ASCII equivalents
+        bool hasSpecial = false;
+        for (int i = 0; i < normalized.Length; i++)
+        {
+            char c = normalized[i];
+            if (c > 0x206F && c != 0x20AB)
+            {
+                hasSpecial = true;
+                break;
+            }
+        }
+
+        if (hasSpecial)
+        {
+            var sb = new StringBuilder(normalized);
+            sb.Replace("✕", "X")
+              .Replace("✓", "V")
+              .Replace("✗", "X")
+              .Replace("★", "*")
+              .Replace("▲", "^")
+              .Replace("▼", "v")
+              .Replace("◄", "<")
+              .Replace("►", ">")
+              .Replace("←", "<-")
+              .Replace("→", "->")
+              .Replace("▶", ">")
+              .Replace("➔", "->")
+              .Replace("✉", "[Thu]")
+              .Replace("⭐", "*")
+              .Replace("①", "(1)")
+              .Replace("②", "(2)")
+              .Replace("③", "(3)")
+              .Replace("④", "(4)")
+              .Replace("⑤", "(5)")
+              .Replace("🍜", "[Pho]")
+              .Replace("🥩", "[Bo]")
+              .Replace("🌿", "[Rau]")
+              .Replace("🫕", "[Nuoc]")
+              .Replace("🎉", "[!]")
+              .Replace("🌉", "[Cau]");
+            return sb.ToString();
+        }
+
+        return normalized;
     }
 
     /// <summary>

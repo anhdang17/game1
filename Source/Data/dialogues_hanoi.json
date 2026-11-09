@@ -1,0 +1,275 @@
+{
+  "dialogues": [
+    {
+      "dialogueId": "Dialogue_BaAn_Intro",
+      "startNodeId": "Node_01",
+      "nodes": [
+        {
+          "id": "Node_01",
+          "speaker": "Bà Cụ Bán Phở",
+          "speakerAvatar": "Avatar_BaAn_Sad",
+          "avatarPosition": "Right",
+          "text": "Chào cháu, Bé Mây... Phố cổ mình giờ ảm đạm quá, các gam màu rực rỡ đều đã bị Bóng Xám mang đi mất. Bà muốn nấu một nồi phở truyền thống mà thiếu nguyên liệu.",
+          "nextNodeId": "Node_02",
+          "branches": []
+        },
+        {
+          "id": "Node_02",
+          "speaker": "Bé Mây",
+          "speakerAvatar": "Avatar_May_Determined",
+          "avatarPosition": "Left",
+          "text": "Bà đừng lo ạ! Cháu và Bút Chì sẽ đi gom đủ nguyên liệu về cho bà ngay!",
+          "branches": [
+            {
+              "choiceId": "Choice_Accept",
+              "choiceText": "Cháu sẵn sàng rồi, thưa bà!",
+              "nextNodeId": "Node_Accept"
+            },
+            {
+              "choiceId": "Choice_AskRecipe",
+              "choiceText": "Bà cần những nguyên liệu gì ạ?",
+              "nextNodeId": "Node_AskRecipe"
+            }
+          ]
+        },
+        {
+          "id": "Node_Accept",
+          "speaker": "Bà Cụ Bán Phở",
+          "speakerAvatar": "Avatar_BaAn_Smile",
+          "avatarPosition": "Right",
+          "text": "Cảm ơn cháu nhiều lắm! Hãy ghé các quầy hàng quanh Hàng Buồm và Lãn Ông nhé!",
+          "nextNodeId": null,
+          "actionTrigger": "Start_Quest_1"
+        },
+        {
+          "id": "Node_AskRecipe",
+          "speaker": "Bà Cụ Bán Phở",
+          "speakerAvatar": "Avatar_BaAn_Smile",
+          "avatarPosition": "Right",
+          "text": "Bà cần bánh phở tươi, thịt bò, nước dùng hầm xương, hành lá và hoa hồi quế chi.",
+          "nextNodeId": null,
+          "actionTrigger": "Start_Quest_1"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_BaAn_InProgress",
+      "startNodeId": "Node_Prog_01",
+      "nodes": [
+        {
+          "id": "Node_Prog_01",
+          "speaker": "Bà Cụ Bán Phở",
+          "speakerAvatar": "Avatar_BaAn_Smile",
+          "avatarPosition": "Right",
+          "text": "Cháu đã ghé đủ các quầy hàng chưa? Phố cổ Hà Nội tuy nhiều ngõ ngách nhưng bà con tiểu thương ai cũng nhiệt tình lắm!",
+          "nextNodeId": null
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_BaAn_TurnIn",
+      "startNodeId": "Node_TurnIn_01",
+      "nodes": [
+        {
+          "id": "Node_TurnIn_01",
+          "speaker": "Bà Cụ Bán Phở",
+          "speakerAvatar": "Avatar_BaAn_Smile",
+          "avatarPosition": "Right",
+          "text": "Tuyệt vời quá bé Mây ơi! Đủ cả 5 nguyên liệu hảo hạng rồi: Bánh phở dẻo mềm, thịt bò tươi, nước dùng thơm ngát, hành hoa và thảo mộc Lãn Ông.",
+          "nextNodeId": "Node_TurnIn_02"
+        },
+        {
+          "id": "Node_TurnIn_02",
+          "speaker": "Bà Cụ Bán Phở",
+          "speakerAvatar": "Avatar_BaAn_Smile",
+          "avatarPosition": "Right",
+          "text": "Giờ bà cháu mình cùng bắt tay vào xếp bát phở hoàn chỉnh chuẩn vị Hà Nội nhé!",
+          "nextNodeId": null,
+          "actionTrigger": "Complete_Quest_1"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_BaAn_PostPho",
+      "startNodeId": "Node_Post_01",
+      "nodes": [
+        {
+          "id": "Node_Post_01",
+          "speaker": "Bà Cụ Bán Phở",
+          "speakerAvatar": "Avatar_BaAn_Smile",
+          "avatarPosition": "Right",
+          "text": "Bát phở thơm ngon chuẩn vị Hà Nội của bà cháu mình đây rồi! Cảm ơn bé Mây nhiều lắm!",
+          "nextNodeId": "Node_Post_02"
+        },
+        {
+          "id": "Node_Post_02",
+          "speaker": "Bà Cụ Bán Phở",
+          "speakerAvatar": "Avatar_BaAn_Smile",
+          "avatarPosition": "Right",
+          "text": "Giờ cháu hãy qua chỗ cổng ra Cầu Long Biên xem sao nhé, nghe nói mấy gian hàng đang che mất lối đi rồi đấy!",
+          "nextNodeId": null
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_BanhPho",
+      "startNodeId": "Node_BP_01",
+      "nodes": [
+        {
+          "id": "Node_BP_01",
+          "speaker": "Bác Cả Hàng Buồm",
+          "speakerAvatar": "Avatar_Merchant",
+          "avatarPosition": "Right",
+          "text": "Bánh phở tươi tráng mỏng sợi dai mềm của bác đây! Mang về cho Bà An nấu phở nhé bé Mây!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_BanhPho"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_ThitBo",
+      "startNodeId": "Node_TB_01",
+      "nodes": [
+        {
+          "id": "Node_TB_01",
+          "speaker": "Bác Tư",
+          "speakerAvatar": "Avatar_BacTu",
+          "avatarPosition": "Right",
+          "text": "Thịt bò tươi thái mỏng bản hoa của Bác Tư đây! Nấu phở là phải có thịt tươi thế này mới ngọt nước!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_ThitBo"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_NuocDung",
+      "startNodeId": "Node_ND_01",
+      "nodes": [
+        {
+          "id": "Node_ND_01",
+          "speaker": "Chú Long Bếp Phở",
+          "speakerAvatar": "Avatar_ChuLong",
+          "avatarPosition": "Right",
+          "text": "Nồi nước dùng ninh xương ống thơm lừng gia truyền đây! Chú đã chắt sẵn vào bình ấm, cẩn thận kẻo nóng nhé bé Mây!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_NuocDung"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_HanhLa",
+      "startNodeId": "Node_HL_01",
+      "nodes": [
+        {
+          "id": "Node_HL_01",
+          "speaker": "Cô Lan Gánh Rau",
+          "speakerAvatar": "Avatar_CoLan",
+          "avatarPosition": "Right",
+          "text": "Hành hoa củ chẻ và rau mùi tươi mơn mởn của Cô Lan đây! Rắc lên bát phở là thơm ngát cả góc phố!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_HanhLa"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_ThaoMoc",
+      "startNodeId": "Node_TM_01",
+      "nodes": [
+        {
+          "id": "Node_TM_01",
+          "speaker": "Thầy Thuốc Lãn Ông",
+          "speakerAvatar": "Avatar_ThaoMoc",
+          "avatarPosition": "Right",
+          "text": "Gói hoa hồi, quế chi, thảo quả sao vàng thơm lựng của tiệm thuốc bắc Lãn Ông đây! Linh hồn của nồi phở Hà Nội đấy cháu!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_ThaoMoc"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Gate_LongBien",
+      "startNodeId": "Node_Gate_01",
+      "nodes": [
+        {
+          "id": "Node_Gate_01",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Happy",
+          "avatarPosition": "Left",
+          "text": "Cổng dẫn lối lên Cầu Long Biên lịch sử bắc qua sông Hồng!",
+          "branches": [
+            {
+              "choiceId": "Choice_Inspect",
+              "choiceText": "Ngắm nhìn nhịp cầu thời gian",
+              "nextNodeId": "Node_Gate_Inspect"
+            },
+            {
+              "choiceId": "Choice_Cross",
+              "choiceText": "Tiếp tục cuộc hành trình",
+              "nextNodeId": "Node_Gate_Cross",
+              "requiredQuestFlag": "Gate_LongBien_Unlocked"
+            }
+          ]
+        },
+        {
+          "id": "Node_Gate_Inspect",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Thinking",
+          "avatarPosition": "Left",
+          "text": "Cầu Long Biên được xây dựng hơn một trăm năm trước, dải lụa thép chứng nhân lịch sử hào hùng của mảnh đất Thăng Long.",
+          "nextNodeId": null
+        },
+        {
+          "id": "Node_Gate_Cross",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Happy",
+          "avatarPosition": "Left",
+          "text": "Lối đi đã thông suốt! Chúng ta cùng đi qua Cầu Long Biên để ngắm nhìn sông Hồng và tiến vào Cố Đô Huế nào!",
+          "nextNodeId": null,
+          "actionTrigger": "Open_World_Map"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_PoI_FlowerBicycle",
+      "startNodeId": "Node_FB_01",
+      "nodes": [
+        {
+          "id": "Node_FB_01",
+          "speaker": "Bé Mây",
+          "speakerAvatar": "Avatar_May_Happy",
+          "avatarPosition": "Left",
+          "text": "Gánh hoa sen Tây Hồ thơm ngát trên chiếc xe đạp cũ... Nét đẹp bình yên khó quên của Hà Nội!",
+          "nextNodeId": null
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_PoI_VintageCyclo",
+      "startNodeId": "Node_VC_01",
+      "nodes": [
+        {
+          "id": "Node_VC_01",
+          "speaker": "Chú Long Lái Xích Lô",
+          "speakerAvatar": "Avatar_ChuLong",
+          "avatarPosition": "Right",
+          "text": "Chiếc xích lô này đã theo chú chở khách ngắm phố phường Hà Nội mấy chục năm qua rồi đấy bé Mây!",
+          "nextNodeId": null
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_PoI_TeaTable",
+      "startNodeId": "Node_TT_01",
+      "nodes": [
+        {
+          "id": "Node_TT_01",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Thinking",
+          "avatarPosition": "Left",
+          "text": "Quán trà đá vỉa hè với chiếc bàn nhựa xanh, ấm chè tươi và đĩa kẹo lạc... nơi lưu giữ bao câu chuyện thường nhật của phố cổ.",
+          "nextNodeId": null
+        }
+      ]
+    }
+  ]
+}

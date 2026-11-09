@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using GameProject.Audio;
+using GameProject.Core.Dialogue;
 using GameProject.Core.Events;
+using GameProject.Core.Hints;
 using GameProject.Core.Interactions;
 using GameProject.Core.Models;
 using GameProject.Core.Movement;
@@ -32,6 +34,10 @@ public sealed class HanoiExplorationScene : IScene
     public IInputService InputService { get; }
     public IAudioService AudioService { get; }
     public IEventBus EventBus { get; }
+    public IDialogueService DialogueService { get; }
+    public DialogueBox DialogueBox { get; }
+    public IHintService HintService { get; }
+    public ButChiGuideUI ButChiGuide { get; }
 
     // Spatial & Kinematics
     public CollisionWorld CollisionWorld { get; }
@@ -53,6 +59,7 @@ public sealed class HanoiExplorationScene : IScene
     public bool RequestWorldMap { get; set; }
     private PhoAssemblyScene? _phoAssemblyModal;
     private StallPuzzleScene? _stallPuzzleModal;
+    private AlbumViewerScene? _albumViewerModal;
     private readonly GrayShadowLetterModal _grayShadowLetterModal = new();
 
     // Scenery props
@@ -71,7 +78,9 @@ public sealed class HanoiExplorationScene : IScene
         GameStateManager? stateManager = null,
         IInputService? inputService = null,
         IAudioService? audioService = null,
-        IEventBus? eventBus = null)
+        IEventBus? eventBus = null,
+        IDialogueService? dialogueService = null,
+        IHintService? hintService = null)
     {
         EventBus = eventBus ?? new EventBus();
         SaveData = saveData ?? SaveData.CreateDefault();
@@ -86,7 +95,15 @@ public sealed class HanoiExplorationScene : IScene
 
         StateManager = stateManager ?? new GameStateManager(EventBus, GameProject.Core.State.GameState.Exploration);
         InputService = inputService ?? new RaylibInputService();
-        AudioService = audioService ?? new RaylibAudioService();
+        AudioService = audioService ?? (Raylib.IsWindowReady() ? new RaylibAudioService() : new NullAudioService());
+
+        DialogueService = dialogueService ?? new DialogueService(EventBus);
+        DialogueService.LoadDialogueFile("Data/dialogues_hanoi.json");
+        DialogueService.OnActionTriggered += HandleDialogueAction;
+        DialogueBox = new DialogueBox(AudioService);
+        HintService = hintService ?? new HintManager();
+        ButChiGuide = new ButChiGuideUI(HintService, AudioService, InputService);
+        EventBus.Subscribe<ItemCollectedEvent>(_ => ButChiGuide.NotifyProgress());
 
         // 1. Setup Collision World & Map Bounds
         CollisionWorld = new CollisionWorld
@@ -177,6 +194,11 @@ public sealed class HanoiExplorationScene : IScene
         // Start Hanoi theme if audio ready
         AudioService.PlayMusic(MusicTrack.HanoiStreetsTheme);
 
+        DialogueService.LoadDialogueFile("Data/dialogues_hanoi.json");
+        DialogueService.OnActionTriggered -= HandleDialogueAction;
+        DialogueService.OnActionTriggered += HandleDialogueAction;
+        ButChiGuide.ResetIdleTimer();
+
         // Sync initial quest flags
         if (QuestFlags.Q3_Completed || QuestFlags.Gate_LongBien_Unlocked)
         {
@@ -197,6 +219,50 @@ public sealed class HanoiExplorationScene : IScene
         }
     }
 
+    private void HandleDialogueAction(string action)
+    {
+        switch (action)
+        {
+            case "Start_Quest_1":
+                if (!QuestFlags.Q1_Started)
+                {
+                    QuestManager.StartQuest(HanoiQuests.Quest1Id);
+                    QuestFlags.Q1_Started = true;
+                }
+                break;
+            case "Complete_Quest_1":
+                if (QuestFlags.Q1_Started && !QuestFlags.Q1_Completed)
+                {
+                    QuestManager.CompleteQuest(HanoiQuests.Quest1Id);
+                    QuestFlags.Q1_Completed = true;
+                }
+                break;
+            case "Collect_BanhPho":
+                Inventory.AddItem(ItemIds.BanhPho);
+                QuestFlags.Q1_BanhPho_Collected = true;
+                break;
+            case "Collect_ThitBo":
+                Inventory.AddItem(ItemIds.ThitBo);
+                QuestFlags.Q1_ThitBo_Collected = true;
+                break;
+            case "Collect_NuocDung":
+                Inventory.AddItem(ItemIds.NuocDung);
+                QuestFlags.Q1_NuocDung_Collected = true;
+                break;
+            case "Collect_HanhLa":
+                Inventory.AddItem(ItemIds.HanhLa);
+                QuestFlags.Q1_HanhLa_Collected = true;
+                break;
+            case "Collect_ThaoMoc":
+                Inventory.AddItem(ItemIds.ThaoMoc);
+                QuestFlags.Q1_ThaoMoc_Collected = true;
+                break;
+            case "Open_World_Map":
+                RequestWorldMap = true;
+                break;
+        }
+    }
+
     public void Update(float deltaTime)
     {
         if (deltaTime <= 0f) return;
@@ -205,7 +271,26 @@ public sealed class HanoiExplorationScene : IScene
         // 1. Process Input Service
         InputService.Update(deltaTime);
 
-        // 2. Mini-Game & Cutscene Modal Overlays
+        // 2. Mini-Game, Album & Cutscene Modal Overlays
+        if (StateManager.CurrentState == GameState.Album)
+        {
+            _albumViewerModal ??= new AlbumViewerScene(SaveData, EventBus, InputService);
+            _albumViewerModal.Update(deltaTime);
+            if (_albumViewerModal.RequestClose)
+            {
+                StateManager.PopState();
+            }
+            return;
+        }
+
+        if (InputService.IsAlbumJustPressed && StateManager.CanOpenAlbum)
+        {
+            _albumViewerModal ??= new AlbumViewerScene(SaveData, EventBus, InputService);
+            _albumViewerModal.Enter();
+            StateManager.PushState(GameState.Album);
+            return;
+        }
+
         if (StateManager.CurrentState == GameState.MiniGamePho && _phoAssemblyModal != null)
         {
             _phoAssemblyModal.Update(deltaTime);
@@ -237,7 +322,9 @@ public sealed class HanoiExplorationScene : IScene
 
         if (StateManager.CurrentState == GameState.Cutscene)
         {
-            _grayShadowLetterModal.Update(deltaTime);
+            _grayShadowLetterModal.Update(deltaTime,
+                isConfirmPressed: InputService.IsConfirmJustPressed,
+                isSkipPressed: InputService.IsCancelJustPressed);
             if (_grayShadowLetterModal.RequestClose)
             {
                 SaveData.Level1State.QuestFlags.GrayShadow_LetterRead = true;
@@ -247,6 +334,14 @@ public sealed class HanoiExplorationScene : IScene
             }
             return;
         }
+
+        // Companion Guide Update
+        if (InputService.MovementDirection != Vector2.Zero)
+        {
+            ButChiGuide.ResetIdleTimer();
+        }
+        string activeQuest = SaveData.Level1State.ActiveQuestId ?? (QuestManager.GetQuestsByState(QuestState.InProgress).FirstOrDefault()?.Id ?? QuestIds.Hanoi01);
+        ButChiGuide.Update(deltaTime, activeQuest, SaveData.Level1State);
 
         // 3. Build Interaction Context
         var context = new InteractionContext(
@@ -258,15 +353,21 @@ public sealed class HanoiExplorationScene : IScene
             AudioService: AudioService
         );
 
-        // 4. Handle Active Dialogue Dismissal
-        if (_activeDialogue != null)
+        // 4. Handle Active Dialogue Dismissal / Progression
+        if (DialogueBox.IsActive || _activeDialogue != null)
         {
-            if (InputService.IsInteractJustPressed || InputService.IsConfirmJustPressed || InputService.IsCancelJustPressed)
+            DialogueBox.Update(deltaTime, InputService);
+
+            bool inputDismiss = InputService.IsInteractJustPressed || InputService.IsConfirmJustPressed || InputService.IsCancelJustPressed;
+            bool choiceWaiting = DialogueBox.CurrentBranches.Count > 0 && !DialogueBox.RequestClose;
+
+            if (DialogueBox.RequestClose || !DialogueBox.IsActive || (inputDismiss && !choiceWaiting))
             {
                 AudioService.PlaySfx(SfxType.ButtonClick);
-                string speaker = _activeDialogue.DialogueSpeaker;
+                string speaker = _activeDialogue?.DialogueSpeaker ?? DialogueBox.CurrentSpeaker;
                 var currentTarget = InteractionManager.CurrentTarget;
                 _activeDialogue = null;
+                DialogueBox.Dismiss();
 
                 // Launch Pho Assembly after completing Q1 dialogue with Ba An
                 if ((speaker == BaAn.DisplayName || speaker == "Bà An") &&
@@ -280,7 +381,7 @@ public sealed class HanoiExplorationScene : IScene
                 {
                     if (QuestFlags.Q2_Completed && !QuestFlags.Q3_Completed)
                     {
-                        _stallPuzzleModal ??= new StallPuzzleScene(SaveData, QuestManager, EventBus, AudioService);
+                        _stallPuzzleModal ??= new StallPuzzleScene(SaveData, QuestManager, EventBus, AudioService, InputService);
                         _stallPuzzleModal.Enter();
                         StateManager.PushState(GameState.MiniGameStalls);
                     }
@@ -298,32 +399,38 @@ public sealed class HanoiExplorationScene : IScene
                     }
                 }
             }
+            return;
         }
-        else
+
+        // 5. Update Movement & Kinematics when not in modal dialogue
+        Kinematics.Update(InputService.MovementDirection, CollisionWorld, deltaTime);
+
+        if (Kinematics.CheckFootstepTrigger())
         {
-            // 5. Update Movement & Kinematics when not in modal dialogue
-            Kinematics.Update(InputService.MovementDirection, CollisionWorld, deltaTime);
+            AudioService.PlaySfx(SfxType.StepStreet, 0.4f);
+        }
 
-            if (Kinematics.CheckFootstepTrigger())
+        // 6. Update Interaction Manager
+        InteractionManager.Update(deltaTime, Kinematics.Position, context);
+
+        if (InputService.IsInteractJustPressed)
+        {
+            var target = InteractionManager.CurrentTarget;
+            var result = InteractionManager.TryInteract(context);
+            if (result != null)
             {
-                AudioService.PlaySfx(SfxType.StepStreet, 0.4f);
-            }
-
-            // 6. Update Interaction Manager
-            InteractionManager.Update(deltaTime, Kinematics.Position, context);
-
-            if (InputService.IsInteractJustPressed)
-            {
-                var result = InteractionManager.TryInteract(context);
-                if (result != null)
+                _activeDialogue = result;
+                string? graphId = GetDialogueGraphIdForTarget(target);
+                if (graphId != null && DialogueService.LoadedGraphs.ContainsKey(graphId))
                 {
-                    _activeDialogue = result;
+                    DialogueService.StartDialogue(graphId);
+                }
+                DialogueBox.Show(result.DialogueSpeaker, result.DialogueText, GetAvatarForSpeaker(result.DialogueSpeaker));
 
-                    // Trigger color wave if quest completed
-                    if (result.QuestCompleted)
-                    {
-                        BloomEffect.TriggerWave(BaAn.Position, 33.3f, 2.0f);
-                    }
+                // Trigger color wave if quest completed
+                if (result.QuestCompleted)
+                {
+                    BloomEffect.TriggerWave(BaAn.Position, 33.3f, 2.0f);
                 }
             }
         }
@@ -486,9 +593,14 @@ public sealed class HanoiExplorationScene : IScene
         // --- 4. Screen-Space UI Passes ---
         InventoryBar.Draw();
         QuestHUD.Draw(QuestFlags, 1280);
+        ButChiGuide.Draw(1280, 720);
 
         // --- 5. Modal Screen Overlays ---
-        if (StateManager.CurrentState == GameState.MiniGamePho && _phoAssemblyModal != null)
+        if (StateManager.CurrentState == GameState.Album && _albumViewerModal != null)
+        {
+            _albumViewerModal.Draw();
+        }
+        else if (StateManager.CurrentState == GameState.MiniGamePho && _phoAssemblyModal != null)
         {
             _phoAssemblyModal.Draw();
         }
@@ -500,10 +612,54 @@ public sealed class HanoiExplorationScene : IScene
         {
             _grayShadowLetterModal.Draw();
         }
+        else if (DialogueBox.IsActive)
+        {
+            DialogueBox.Draw();
+        }
         else if (_activeDialogue != null)
         {
             DrawDialogueModal(_activeDialogue);
         }
+    }
+
+    private static string GetAvatarForSpeaker(string speaker)
+    {
+        if (speaker.Contains("Bà")) return "Avatar_BaAn";
+        if (speaker.Contains("Mây")) return "Avatar_May";
+        if (speaker.Contains("Bút Chì")) return "Avatar_ButChi";
+        if (speaker.Contains("Bác Tư")) return "Avatar_BacTu";
+        if (speaker.Contains("Chú Long")) return "Avatar_ChuLong";
+        if (speaker.Contains("Cô Lan")) return "Avatar_CoLan";
+        if (speaker.Contains("Lãn Ông")) return "Avatar_ThaoMoc";
+        return "Avatar_Merchant";
+    }
+
+    private string? GetDialogueGraphIdForTarget(IInteractable? target)
+    {
+        if (target is BaAnNpc)
+        {
+            if (QuestFlags.Q1_Completed && !QuestFlags.Q2_Completed) return "Dialogue_BaAn_TurnIn";
+            if (QuestFlags.Q2_Completed) return "Dialogue_BaAn_PostPho";
+            if (QuestFlags.Q1_Started) return "Dialogue_BaAn_InProgress";
+            return "Dialogue_BaAn_Intro";
+        }
+        if (target is PhoIngredientMerchant stall)
+        {
+            return stall.ItemId switch
+            {
+                ItemIds.BanhPho => "Dialogue_Stall_BanhPho",
+                ItemIds.ThitBo => "Dialogue_Stall_ThitBo",
+                ItemIds.NuocDung => "Dialogue_Stall_NuocDung",
+                ItemIds.HanhLa => "Dialogue_Stall_HanhLa",
+                ItemIds.ThaoMoc => "Dialogue_Stall_ThaoMoc",
+                _ => null
+            };
+        }
+        if (target is LongBienGateInteractable)
+        {
+            return "Dialogue_Gate_LongBien";
+        }
+        return null;
     }
 
     private void DrawLongBienGateEntity(Vector2 pos, float animTime)
@@ -518,8 +674,10 @@ public sealed class HanoiExplorationScene : IScene
             {
                 Raylib.DrawLineEx(new Vector2(pos.X + s, pos.Y - 14f), new Vector2(pos.X + s + 6f, pos.Y + 2f), 3f, new Color(255, 220, 60, 255));
             }
-            // Padlock icon
-            FontManager.Instance.DrawText("🔒", new Vector2(pos.X - 8f, pos.Y - 32f), 14f, Color.White);
+            // Vector Padlock icon
+            Rectangle lockBody = new(pos.X - 7f, pos.Y - 32f, 14f, 12f);
+            VectorRenderer.DrawRoundedRect(lockBody, 0.2f, new Color(255, 215, 64, 255), HanoiPalette.CartoonOutline, 1.2f, withShadow: false);
+            Raylib.DrawCircleLines((int)pos.X, (int)pos.Y - 33, 4.5f, HanoiPalette.CartoonOutline);
         }
         else
         {

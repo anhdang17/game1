@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using GameProject.Core.Dialogue;
+using GameProject.Core.Events;
+using GameProject.Core.Models;
+using GameProject.UI;
 using Xunit;
 
 namespace GameProject.Tests;
@@ -28,10 +31,12 @@ public class DialogueTests
           "text": "Bà đừng lo ạ! Cháu và Bút Chì sẽ đi gom đủ nguyên liệu về cho bà ngay!",
           "branches": [
             {
+              "choiceId": "Choice_Accept",
               "choiceText": "Cháu sẵn sàng rồi, thưa bà!",
               "nextNodeId": "Node_Accept"
             },
             {
+              "choiceId": "Choice_AskRecipe",
               "choiceText": "Bà cần những nguyên liệu gì ạ?",
               "nextNodeId": "Node_AskRecipe"
             }
@@ -161,5 +166,161 @@ public class DialogueTests
         var node = service.StartDialogue("Dialogue_BaAn_Intro");
         Assert.Null(node);
         Assert.False(service.IsDialogueActive);
+    }
+
+    [Fact]
+    public void LoadDialogueJson_MultiGraphArray_LoadsAllGraphs()
+    {
+        const string multiJson = """
+        [
+          { "dialogueId": "G1", "startNodeId": "N1", "nodes": [{ "id": "N1", "speaker": "A", "text": "Hi" }] },
+          { "dialogueId": "G2", "startNodeId": "N2", "nodes": [{ "id": "N2", "speaker": "B", "text": "Bye" }] }
+        ]
+        """;
+        var service = new DialogueService();
+        service.LoadDialogueJson(multiJson);
+
+        Assert.NotNull(service.StartDialogue("G1"));
+        Assert.NotNull(service.StartDialogue("G2"));
+    }
+
+    [Fact]
+    public void LoadDialogueJson_EnvelopeWithDialoguesArray_LoadsAllGraphs()
+    {
+        const string envelopeJson = """
+        {
+          "dialogues": [
+            { "dialogueId": "Env1", "startNodeId": "N1", "nodes": [{ "id": "N1", "speaker": "A", "text": "Hi" }] },
+            { "dialogueId": "Env2", "startNodeId": "N2", "nodes": [{ "id": "N2", "speaker": "B", "text": "Bye" }] }
+          ]
+        }
+        """;
+        var service = new DialogueService();
+        service.LoadDialogueJson(envelopeJson);
+
+        Assert.NotNull(service.StartDialogue("Env1"));
+        Assert.NotNull(service.StartDialogue("Env2"));
+    }
+
+    [Fact]
+    public void DialogueService_PublishesEventsToEventBus()
+    {
+        var bus = new EventBus();
+        var service = new DialogueService(bus);
+        service.LoadDialogueJson(SampleDialogueJson);
+
+        bool started = false;
+        bool advanced = false;
+        bool choiceSelected = false;
+        bool ended = false;
+
+        bus.Subscribe<DialogueStartedEvent>(_ => started = true);
+        bus.Subscribe<DialogueLineAdvancedEvent>(_ => advanced = true);
+        bus.Subscribe<DialogueChoiceSelectedEvent>(_ => choiceSelected = true);
+        bus.Subscribe<DialogueEndedEvent>(_ => ended = true);
+
+        service.StartDialogue("Dialogue_BaAn_Intro");
+        Assert.True(started);
+        Assert.True(advanced);
+
+        service.AdvanceToNext(); // at Node_02 with choices
+        service.SelectChoice("Choice_Accept");
+        Assert.True(choiceSelected);
+
+        service.AdvanceToNext(); // reaches end
+        Assert.True(ended);
+        Assert.False(service.IsDialogueActive);
+    }
+
+    [Fact]
+    public void DialogueBranch_FiltersByRequiredQuestFlag()
+    {
+        var flags = new QuestFlags { Gate_LongBien_Unlocked = false };
+        var node = new DialogueNode
+        {
+            Id = "TestNode",
+            Branches = new List<DialogueBranch>
+            {
+                new() { ChoiceText = "Always open", NextNodeId = "N1" },
+                new() { ChoiceText = "Only when gate open", NextNodeId = "N2", RequiredQuestFlag = "Gate_LongBien_Unlocked" }
+            }
+        };
+        var service = new DialogueService();
+        var available = service.GetAvailableBranches(node, flags);
+        Assert.Single(available);
+        Assert.Equal("Always open", available[0].ChoiceText);
+
+        flags.Gate_LongBien_Unlocked = true;
+        var unlocked = service.GetAvailableBranches(node, flags);
+        Assert.Equal(2, unlocked.Count);
+    }
+
+    [Fact]
+    public void SelectChoice_ByChoiceIdString_TransitionsCorrectly()
+    {
+        var service = new DialogueService();
+        service.LoadDialogueJson(SampleDialogueJson);
+
+        service.StartDialogue("Dialogue_BaAn_Intro");
+        service.AdvanceToNext();
+
+        var node = service.SelectChoice("Choice_AskRecipe");
+        Assert.NotNull(node);
+        Assert.Equal("Node_AskRecipe", node.Id);
+    }
+
+    [Fact]
+    public void DialogueBox_TypewriterFastForward_AndHeadlessExecution()
+    {
+        var box = new DialogueBox();
+        box.Show("Bé Mây", "Chào phố cổ Hà Nội!");
+
+        Assert.True(box.IsActive);
+        Assert.False(box.IsTypingComplete);
+
+        box.FastForward();
+        Assert.True(box.IsTypingComplete);
+        Assert.Equal("Chào phố cổ Hà Nội!", box.VisibleText);
+    }
+
+    [Fact]
+    public void DialogueBox_ChoiceSelectionAndNavigation_Headless()
+    {
+        var service = new DialogueService();
+        service.LoadDialogueJson(SampleDialogueJson);
+        var box = new DialogueBox();
+
+        var startNode = service.StartDialogue("Dialogue_BaAn_Intro");
+        box.Show(startNode!, service);
+        box.FastForward();
+        Assert.True(box.IsTypingComplete);
+
+        box.AdvanceToNext();
+        Assert.Equal("Node_02", box.CurrentSpeaker == "Bé Mây" ? "Node_02" : "");
+        Assert.Equal(2, box.CurrentBranches.Count);
+
+        box.FastForward();
+        Assert.Equal(0, box.SelectedChoiceIndex);
+
+        box.SelectNextChoice();
+        Assert.Equal(1, box.SelectedChoiceIndex);
+
+        box.SelectPreviousChoice();
+        Assert.Equal(0, box.SelectedChoiceIndex);
+
+        box.ChooseOption(0);
+        Assert.Equal("Node_Accept", service.CurrentNode?.Id);
+    }
+
+    [Fact]
+    public void DialogueService_LoadDialogueFile_LoadsHanoiDialogues()
+    {
+        var service = new DialogueService();
+        service.LoadDialogueFile("Data/dialogues_hanoi.json");
+
+        Assert.True(service.LoadedGraphs.Count >= 5);
+        Assert.NotNull(service.StartDialogue("Dialogue_BaAn_Intro"));
+        Assert.NotNull(service.StartDialogue("Dialogue_Stall_BanhPho"));
+        Assert.NotNull(service.StartDialogue("Dialogue_Gate_LongBien"));
     }
 }

@@ -1,5 +1,8 @@
 using System;
 using GameProject.Audio;
+using GameProject.Core.Events;
+using GameProject.Core.Models;
+using GameProject.Core.Persistence;
 using GameProject.Graphics;
 using GameProject.Stages;
 using Raylib_cs;
@@ -18,8 +21,17 @@ public static class Program
         // 2. Services Initialization
         using var audioService = new RaylibAudioService();
         using var sceneManager = new SceneManager();
+        var eventBus = new EventBus();
+        var saveLoadService = new SaveLoadService(SaveLoadService.DefaultSavePath, null, eventBus);
+        var saveData = saveLoadService.Load() ?? SaveData.CreateDefault();
+        var inputService = new RaylibInputService();
 
-        var explorationScene = new HanoiExplorationScene(audioService: audioService);
+        var explorationScene = new HanoiExplorationScene(
+            saveData: saveData,
+            audioService: audioService,
+            inputService: inputService,
+            eventBus: eventBus
+        );
         sceneManager.SwitchScene(explorationScene);
 
         // 3. Main Game Loop (60 FPS)
@@ -28,6 +40,29 @@ public static class Program
             float dt = Raylib.GetFrameTime();
             // Cap delta time to prevent large physics jumps on window pause/unfocus
             if (dt > 0.1f) dt = 0.1f;
+
+            // Scene coordinator transitions
+            if (sceneManager.CurrentScene is HanoiExplorationScene exp && exp.RequestWorldMap)
+            {
+                exp.RequestWorldMap = false;
+                saveLoadService.Save(saveData);
+                sceneManager.SwitchScene(new WorldMapScene(saveData, eventBus, inputService));
+            }
+            else if (sceneManager.CurrentScene is WorldMapScene wm)
+            {
+                if (wm.RequestTravelTo == "Hanoi")
+                {
+                    sceneManager.SwitchScene(new HanoiExplorationScene(saveData, audioService: audioService, inputService: inputService, eventBus: eventBus));
+                }
+                else if (wm.RequestAlbum)
+                {
+                    sceneManager.SwitchScene(new AlbumViewerScene(saveData, eventBus, inputService));
+                }
+            }
+            else if (sceneManager.CurrentScene is AlbumViewerScene album && album.RequestClose)
+            {
+                sceneManager.SwitchScene(new WorldMapScene(saveData, eventBus, inputService));
+            }
 
             sceneManager.Update(dt);
 
@@ -40,6 +75,7 @@ public static class Program
         }
 
         // 4. Clean Shutdown
+        saveLoadService.Save(saveData);
         sceneManager.Dispose();
         FontManager.Instance.Dispose();
 

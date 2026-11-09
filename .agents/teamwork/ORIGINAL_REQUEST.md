@@ -42,3 +42,15 @@ Integrity mode: development
 - [ ] Giao diện Bộ sưu tập hiển thị đầy đủ và chính xác các trang sổ, tem và thẻ thông tin đã thu thập.
 - [ ] Dữ liệu tiến trình được lưu bền vững và tải lại chính xác qua các lần khởi động game.
 - [ ] Có bộ kiểm thử tự động (automated tests/verification scripts) kiểm tra được tính đúng đắn của logic nhiệm vụ, chuyển đổi trạng thái game và cơ chế Save/Load.
+
+## Follow-up — 2026-11-09T01:42:00Z
+
+Người dùng vừa nhắn: "cho team chạy dự án chạy tiếp đi em". Xin cho biết tình hình tiến độ hiện tại và kế hoạch tiếp theo của nhóm.
+
+## Follow-up — 2026-11-09T05:45:13Z
+
+Người dùng vừa thông báo: "chạy tiếp đi mấy đứa, hồi quota rồi". Hãy tiếp tục điều phối hoàn thiện Milestone 4, giải quyết các test cases phản biện và tiến hành Milestone 5 nhé!
+
+## Follow-up — 2026-11-09T11:01:55Z
+
+Kết nối mạng vừa bị ngắt tạm thời. Vui lòng tiếp tục điều phối hoàn tất Final Gate Milestone 5 và tiến hành Victory Audit để hoàn tất dự án.

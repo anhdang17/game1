@@ -59,4 +59,37 @@ public class Utf8EncodingTests
 
         Assert.Equal(pangram, restored);
     }
+
+    [Fact]
+    public void FontManager_NormalizeText_MapsAllSymbolsToCleanAsciiWithoutMissingGlyphs()
+    {
+        string inputWithSymbols = "✕ Đóng | ✓ Hoàn thành | ✗ Thất bại | ★ Ngôi sao | ▲ Lên | ▼ Xuống | ◄ Trái | ► Phải | ← Lùi | → Tiến | ✉ Thư | ➔ Tiếp";
+        string normalized = GameProject.Graphics.FontManager.NormalizeText(inputWithSymbols);
+
+        // All symbols mapped to safe characters
+        Assert.DoesNotContain("✕", normalized);
+        Assert.DoesNotContain("✓", normalized);
+        Assert.DoesNotContain("✗", normalized);
+        Assert.DoesNotContain("★", normalized);
+        Assert.DoesNotContain("▲", normalized);
+        Assert.DoesNotContain("▼", normalized);
+        Assert.DoesNotContain("◄", normalized);
+        Assert.DoesNotContain("►", normalized);
+        Assert.DoesNotContain("←", normalized);
+        Assert.DoesNotContain("→", normalized);
+        Assert.DoesNotContain("✉", normalized);
+        Assert.DoesNotContain("➔", normalized);
+
+        Assert.Contains("X Đóng", normalized);
+        Assert.Contains("V Hoàn thành", normalized);
+        Assert.Contains("* Ngôi sao", normalized);
+        Assert.Contains("[Thu] Thư", normalized);
+
+        // Every character in normalized text must be in the 762 supported codepoints
+        var codepoints = new System.Collections.Generic.HashSet<int>(GameProject.Graphics.FontManager.GetVietnameseCodepoints());
+        foreach (char c in normalized)
+        {
+            Assert.Contains((int)c, codepoints);
+        }
+    }
 }

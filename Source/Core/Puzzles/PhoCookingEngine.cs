@@ -66,6 +66,7 @@ public sealed class PhoCookingEngine : IPhoPuzzleEngine
     public bool ValidateAssembly(out string errorMessage)
     {
         errorMessage = string.Empty;
+        IsSolved = false;
 
         // Check if any slot is empty
         for (int i = 0; i < TotalSlots; i++)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using GameProject.Core.Events;
+using GameProject.Core.Hints;
 using GameProject.Core.Models;
 using GameProject.Core.Ports;
 using GameProject.Core.Puzzles;
@@ -62,18 +63,18 @@ public sealed class PhoAssemblyScene : IScene
     private const float HandSpacing = 180f;
 
     // Ingredient display info
-    private static readonly (string Id, string Name, string Emoji)[] IngredientInfo =
+    private static readonly (string Id, string Name, string Code)[] IngredientInfo =
     [
-        (ItemIds.BanhPho,  "Bánh Phở",   "🍜"),
-        (ItemIds.ThitBo,   "Thịt Bò",    "🥩"),
-        (ItemIds.HanhLa,   "Hành Lá",    "🌿"),
-        (ItemIds.NuocDung, "Nước Dùng",  "🫕"),
-        (ItemIds.ThaoMoc,  "Thảo Mộc",   "⭐"),
+        (ItemIds.BanhPho,  "Bánh Phở",   "[Pho]"),
+        (ItemIds.ThitBo,   "Thịt Bò",    "[Bo]"),
+        (ItemIds.HanhLa,   "Hành Lá",    "[Rau]"),
+        (ItemIds.NuocDung, "Nước Dùng",  "[Nuoc]"),
+        (ItemIds.ThaoMoc,  "Thảo Mộc",   "[GiaVi]"),
     ];
 
     private static readonly string[] StepLabels =
     [
-        "① Lớp đáy", "② Lớp hai", "③ Lớp ba", "④ Chan sôi", "⑤ Hoàn thiện"
+        "Lớp 1 (Đáy)", "Lớp 2 (Thịt)", "Lớp 3 (Rau)", "Lớp 4 (Nước)", "Lớp 5 (Gia vị)"
     ];
 
     public PhoAssemblyScene(
@@ -235,6 +236,20 @@ public sealed class PhoAssemblyScene : IScene
         if (Raylib.IsKeyPressed(KeyboardKey.R))
         {
             Reset();
+        }
+
+        // H for on-demand hint
+        if ((_inputService != null && _inputService.IsHintJustPressed) || (Raylib.IsWindowReady() && Raylib.IsKeyPressed(KeyboardKey.H)))
+        {
+            int nextSlot = -1;
+            for (int s = 0; s < PhoCookingEngine.TotalSlots; s++)
+            {
+                if (string.IsNullOrEmpty(_engine.CurrentSlots[s])) { nextSlot = s; break; }
+            }
+            var hintMgr = new HintManager();
+            _feedbackMessage = hintMgr.GetPhoAssemblyHint(nextSlot, _engine.CurrentSlots);
+            _feedbackTimer = 6f;
+            _audioService?.PlaySfx(SfxType.DialogueBlip);
         }
     }
 
@@ -565,7 +580,7 @@ public sealed class PhoAssemblyScene : IScene
 
         if (_solveTimer > 0.3f)
         {
-            string msg1 = "🎉 Bát Phở Hà Nội Hoàn Hảo!";
+            string msg1 = "Bát Phở Hà Nội Hoàn Hảo!";
             string msg2 = "Phố cổ bừng thêm 33.3% màu sắc! Bà An đã chỉ đường ra Cầu Long Biên.";
             Vector2 s1 = FontManager.Instance.MeasureText(msg1, 32f);
             Vector2 s2 = FontManager.Instance.MeasureText(msg2, 16f);

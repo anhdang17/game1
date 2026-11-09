@@ -90,7 +90,7 @@ public sealed class GrayShadowLetterModal
         Vector2 emblemCenter = new(640f, 132f);
         Raylib.DrawCircleV(emblemCenter, 18f, new Color(166, 43, 43, 255));
         Raylib.DrawCircleLines((int)emblemCenter.X, (int)emblemCenter.Y, 18f, HanoiPalette.CartoonOutline);
-        FontManager.Instance.DrawText("✉", new Vector2(emblemCenter.X - 6f, emblemCenter.Y - 8f), 14f, Color.White);
+        VectorRenderer.DrawEnvelopeIcon(emblemCenter, 18f, 13f, Color.White, new Color(245, 235, 220, 255), HanoiPalette.CartoonOutline);
 
         string headerTitle = "Bức Thư Bí Ẩn Của Bóng Xám";
         Vector2 hSz = FontManager.Instance.MeasureText(headerTitle, 20f);
@@ -125,7 +125,7 @@ public sealed class GrayShadowLetterModal
             Color btnColor = Raylib.ColorAlpha(new Color(56, 161, 105, 255), pulse);
             VectorRenderer.DrawRoundedRect(btnRect, 0.35f, btnColor, HanoiPalette.CartoonOutline, 2.0f);
 
-            string btnText = "[Enter / Space] Tiếp tục hành trình ➔";
+            string btnText = "[Enter / Space] Tiếp tục hành trình ->";
             Vector2 bSz = FontManager.Instance.MeasureText(btnText, 13f);
             FontManager.Instance.DrawText(btnText, new Vector2(640f - bSz.X / 2f, btnRect.Y + 12f), 13f, Color.White);
         }

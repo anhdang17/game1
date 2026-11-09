@@ -99,9 +99,9 @@
 |---|------|-------|-------------|--------|
 | M1 | Core Domain Engine & Persistence | Models, GameStateManager, QuestEngine, SaveLoadService, EventBus, MockPorts | none | DONE |
 | M2 | Hanoi Exploration & Quest 1 | Hanoi street map, Bé Mây movement, Y-sorting, stalls, Q1 ingredient gathering | M1 | DONE |
-| M3 | Hanoi Quests 2 & 3 & Progression Climax | Q2 Phở assembly, Q3 spatial grid BFS, Long Biên gate unlock, Journal Page, Lotus Stamp, Gray Shadow letter | M1, M2 | IN_PROGRESS |
-| M4 | Dialogue, Hint, Album Systems & World Map | JSON Dialogue parser & UI, Bút Chì hint engine, Collection Album (3 tabs), 2D World Map | M1, M3 | PLANNED |
-| M5 | Final Integration & E2E Verification | Phase 1: Pass 100% E2E tests (Tiers 1-4); Phase 2: Adversarial coverage hardening (Tier 5); Production build packaging | M1, M2, M3, M4 | PLANNED |
+| M3 | Hanoi Quests 2 & 3 & Progression Climax | Q2 Phở assembly, Q3 spatial grid BFS, Long Biên gate unlock, Journal Page, Lotus Stamp, Gray Shadow letter | M1, M2 | DONE |
+| M4 | Dialogue, Hint, Album Systems & World Map | JSON Dialogue parser & UI, Bút Chì hint engine, Collection Album (3 tabs), 2D World Map | M1, M3 | DONE |
+| M5 | Final Integration & E2E Verification | Phase 1: Pass 100% E2E tests (Tiers 1-4); Phase 2: Adversarial coverage hardening (Tier 5); Production build packaging | M1, M2, M3, M4 | DONE |
 
 ## Interface Contracts
 

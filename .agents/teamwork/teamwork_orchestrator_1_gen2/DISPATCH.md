@@ -43,3 +43,4 @@ Integrity mode: development
 - [ ] Giao diện Bộ sưu tập hiển thị đầy đủ và chính xác các trang sổ, tem và thẻ thông tin đã thu thập.
 - [ ] Dữ liệu tiến trình được lưu bền vững và tải lại chính xác qua các lần khởi động game.
 - [ ] Có bộ kiểm thử tự động (automated tests/verification scripts) kiểm tra được tính đúng đắn của logic nhiệm vụ, chuyển đổi trạng thái game và cơ chế Save/Load.
+

@@ -96,13 +96,15 @@ public sealed class QuestHUD
         int count = flags.GetQ1CollectedCount();
         if (flags.Q1_Completed)
         {
-            FontManager.Instance.DrawText("✓ Đã gom đủ 5 nguyên liệu!", new Vector2(Bounds.X + 16f, Bounds.Y + 44f), 12f, new Color(46, 133, 64, 255));
+            VectorRenderer.DrawCheckmark(new Vector2(Bounds.X + 22f, Bounds.Y + 50f), 10f, new Color(46, 133, 64, 255));
+            FontManager.Instance.DrawText("Đã gom đủ 5 nguyên liệu!", new Vector2(Bounds.X + 32f, Bounds.Y + 44f), 12f, new Color(46, 133, 64, 255));
         }
         else if (flags.AreAllQ1IngredientsCollected())
         {
             float pulse = 0.7f + MathF.Sin(_pulseTimer * 6f) * 0.3f;
             Color alertColor = Raylib.ColorAlpha(new Color(192, 86, 33, 255), pulse);
-            FontManager.Instance.DrawText("★ Mang nguyên liệu về cho Bà An!", new Vector2(Bounds.X + 16f, Bounds.Y + 44f), 12f, alertColor);
+            VectorRenderer.DrawFivePointStar(new Vector2(Bounds.X + 22f, Bounds.Y + 50f), 6f, alertColor);
+            FontManager.Instance.DrawText("Mang nguyên liệu về cho Bà An!", new Vector2(Bounds.X + 32f, Bounds.Y + 44f), 12f, alertColor);
         }
         else
         {

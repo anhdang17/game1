@@ -407,7 +407,7 @@ public class AdversarialCoreTests
     }
 
     [Fact]
-    public void Stress_EventBus_MultiThreadedConcurrentPublishAndSubscribe()
+    public async Task Stress_EventBus_MultiThreadedConcurrentPublishAndSubscribe()
     {
         var bus = new CoreEventBus();
         const int threadCount = 8;
@@ -441,7 +441,7 @@ public class AdversarialCoreTests
             }
         });
 
-        Task.WaitAll(publishTasks);
+        await Task.WhenAll(publishTasks);
         cts.Cancel();
 
         Assert.True(totalReceived >= threadCount * eventsPerThread,
