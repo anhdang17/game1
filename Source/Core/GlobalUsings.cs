@@ -1,0 +1,12 @@
+global using GameProject.Core.Models;
+global using GameProject.Core.Persistence;
+global using GameProject.Core.State;
+global using GameProject.Core.Events;
+global using GameProject.Core.Ports;
+global using GameProject.Core.Quests;
+global using GameProject.Core.Simulation;
+global using GameProject.Core.Puzzles;
+global using GameProject.Core.Dialogue;
+global using GameProject.Core.Hints;
+global using GameProject.Core.Album;
+global using GameProject.Core.WorldMap;

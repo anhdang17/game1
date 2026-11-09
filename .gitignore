@@ -1,0 +1,73 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]ogs/
+
+# IDE & editors
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Test results & coverage
+TestResults/
+*.trx
+*.coverage
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Unity
+Library/
+ProjectSettings/
+Temp/
+Build/
+
+# UPM
+.upm/
+
+#unity
+
+*.unitypackage
+
+Library/
+ProjectSettings/
+Temp/
+Build/
+
+*.unitypackage
+
+Assets/Plugins/
+Assets/Standard
+
+# Other Unity clutter
+*.userprefs
+*.pidb
+*.booproj
+*.sln.docstates
+*.svd
+*.sw?
+
+# Rider settings
+.idea/
+
+# Rider projects
+*.sln
+*.csproj
+*.vb
+
+# unity
+Assets/Standard
+Assets/Plugins
+
+# unity
+Assets/Standard
+Assets/Plugins
+
+
+
+# unity
+Assets/Standard
+Assets/Plugins
