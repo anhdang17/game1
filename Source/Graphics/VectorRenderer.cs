@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 using GameProject.Core.Movement;
 using Raylib_cs;
@@ -14,12 +15,14 @@ public static class VectorRenderer
 
     public static void DrawDropShadow(Rectangle bounds, float roundness, float offsetY = 4f, float alpha = 0.22f)
     {
+        if (!Raylib.IsWindowReady()) return;
         Rectangle shadowRec = new(bounds.X + 2f, bounds.Y + offsetY, bounds.Width, bounds.Height);
         Raylib.DrawRectangleRounded(shadowRec, roundness, 6, Raylib.ColorAlpha(Color.Black, alpha));
     }
 
     public static void DrawRoundedRect(Rectangle bounds, float roundness, Color fillColor, Color outlineColor, float outlineWidth = 2f, bool withShadow = true)
     {
+        if (!Raylib.IsWindowReady()) return;
         if (withShadow) DrawDropShadow(bounds, roundness);
         Raylib.DrawRectangleRounded(bounds, roundness, 8, fillColor);
         if (outlineWidth > 0f)
@@ -30,6 +33,7 @@ public static class VectorRenderer
 
     public static void DrawCartoonCircle(Vector2 center, float radius, Color fillColor, Color outlineColor, float outlineWidth = 2f, bool withShadow = true)
     {
+        if (!Raylib.IsWindowReady()) return;
         if (withShadow)
         {
             Raylib.DrawCircleV(new Vector2(center.X + 2f, center.Y + 3f), radius, Raylib.ColorAlpha(Color.Black, 0.22f));
@@ -43,6 +47,7 @@ public static class VectorRenderer
 
     public static void DrawPatternedAwning(Rectangle bounds, Color color1, Color color2, int stripes = 6)
     {
+        if (!Raylib.IsWindowReady()) return;
         float stripeWidth = bounds.Width / stripes;
         for (int i = 0; i < stripes; i++)
         {
@@ -59,103 +64,521 @@ public static class VectorRenderer
 
     // --- Iconic Hanoi Cultural Elements ---
 
-    public static void DrawBeMay(Vector2 feetPos, FacingDirection facing, float animTime, bool isMoving, float scale = 1.0f)
+    public static void DrawBeMay(Vector2 feetPos, FacingDirection facing, float animTime, bool isMoving, float scale = 1.0f, bool withShadow = true)
     {
-        float bob = isMoving ? MathF.Abs(MathF.Sin(animTime * 10f)) * 3f * scale : MathF.Sin(animTime * 2f) * 1f * scale;
-        Vector2 basePos = new(feetPos.X, feetPos.Y - bob);
+        if (!Raylib.IsWindowReady()) return;
 
-        // Ground contact shadow
-        Raylib.DrawEllipse((int)feetPos.X, (int)feetPos.Y, 16f * scale, 8f * scale, Raylib.ColorAlpha(Color.Black, 0.28f));
+        // Idle floating hover vs moving bouncy glide
+        float hoverBob = isMoving
+            ? MathF.Abs(MathF.Sin(animTime * 8f)) * 3.5f * scale
+            : MathF.Sin(animTime * 2.8f) * 4.0f * scale;
 
-        // Legs / Pants
-        Rectangle leftLeg = new(basePos.X - 8f * scale, basePos.Y - 14f * scale, 6f * scale, 12f * scale);
-        Rectangle rightLeg = new(basePos.X + 2f * scale, basePos.Y - 14f * scale, 6f * scale, 12f * scale);
-        Raylib.DrawRectangleRounded(leftLeg, 0.4f, 4, HanoiPalette.BeMayPantsGrey);
-        Raylib.DrawRectangleRounded(rightLeg, 0.4f, 4, HanoiPalette.BeMayPantsGrey);
+        // Squash & stretch: compresses on downward motion, stretches when floating upward
+        float stretchCycle = isMoving ? MathF.Sin(animTime * 8f) : MathF.Sin(animTime * 2.8f);
+        float stretchX = 1.0f + (isMoving ? 0.08f : 0.035f) * stretchCycle;
+        float stretchY = 1.0f - (isMoving ? 0.08f : 0.035f) * stretchCycle;
 
-        // Tunic (Áo Bà Ba)
-        Rectangle torso = new(basePos.X - 12f * scale, basePos.Y - 36f * scale, 24f * scale, 24f * scale);
-        DrawRoundedRect(torso, 0.35f, HanoiPalette.BeMayShirtBlue, HanoiPalette.CartoonOutline, 1.5f * scale, withShadow: false);
+        // Center of cloud cluster anchored above ground
+        Vector2 cloudCenter = new(feetPos.X, feetPos.Y - 26f * scale - hoverBob);
 
-        // Satchel (Cuốn Sổ Ký Ức bag)
-        Rectangle satchel = new(basePos.X + 4f * scale, basePos.Y - 26f * scale, 10f * scale, 10f * scale);
-        DrawRoundedRect(satchel, 0.3f, HanoiPalette.SatchelMustard, HanoiPalette.CartoonOutline, 1.2f * scale, withShadow: false);
-        Raylib.DrawLineEx(new Vector2(basePos.X - 10f * scale, basePos.Y - 34f * scale), new Vector2(basePos.X + 8f * scale, basePos.Y - 22f * scale), 2f * scale, new Color(109, 76, 65, 255));
-
-        // Head
-        Vector2 headCenter = new(basePos.X, basePos.Y - 44f * scale);
-        Raylib.DrawCircleV(headCenter, 11f * scale, HanoiPalette.SkinPeach);
-
-        // Facial Features (Only visible when facing Down, Left, or Right)
-        if (facing != FacingDirection.Up)
+        // Ground shadow scales inversely with altitude
+        if (withShadow)
         {
-            // Cheeks
-            Raylib.DrawCircleV(new Vector2(headCenter.X - 6f * scale, headCenter.Y + 2f * scale), 2.5f * scale, HanoiPalette.CheekBlush);
-            Raylib.DrawCircleV(new Vector2(headCenter.X + 6f * scale, headCenter.Y + 2f * scale), 2.5f * scale, HanoiPalette.CheekBlush);
-
-            // Eyes
-            float eyeXOff = (facing == FacingDirection.Left) ? -2f * scale : (facing == FacingDirection.Right ? 2f * scale : 0f);
-            Raylib.DrawCircleV(new Vector2(headCenter.X - 4f * scale + eyeXOff, headCenter.Y - 1f * scale), 1.8f * scale, HanoiPalette.CartoonOutline);
-            Raylib.DrawCircleV(new Vector2(headCenter.X + 4f * scale + eyeXOff, headCenter.Y - 1f * scale), 1.8f * scale, HanoiPalette.CartoonOutline);
+            float shadowAlpha = Math.Clamp(0.38f - (hoverBob / (45f * scale)), 0.18f, 0.45f);
+            float shadowW = Math.Max(6f * scale, (24f * scale) * (1.0f - hoverBob / (60f * scale)));
+            float shadowH = Math.Max(2.5f * scale, 9.0f * scale);
+            Raylib.DrawEllipse((int)feetPos.X, (int)feetPos.Y, shadowW, shadowH, Raylib.ColorAlpha(new Color(25, 25, 30, 255), shadowAlpha));
         }
 
-        // Conical Hat (Nón Lá)
-        Vector2 hatApex = new(headCenter.X, headCenter.Y - 16f * scale);
-        Vector2 hatLeft = new(headCenter.X - 18f * scale, headCenter.Y - 4f * scale);
-        Vector2 hatRight = new(headCenter.X + 18f * scale, headCenter.Y - 4f * scale);
-        Raylib.DrawTriangle(hatRight, hatApex, hatLeft, HanoiPalette.NonLaStraw); // Counter-clockwise
-        Raylib.DrawTriangleLines(hatRight, hatApex, hatLeft, HanoiPalette.CartoonOutline);
-        Raylib.DrawCircleV(new Vector2(headCenter.X, headCenter.Y - 8f * scale), 4f * scale, HanoiPalette.NonLaStraw);
+        // Ambient micro cloud puffs & floating droplets beneath the cloud
+        float dropletBob = MathF.Sin(animTime * 3.2f) * 1.5f * scale;
+        Vector2 puffCluster = new(cloudCenter.X - 19f * scale, feetPos.Y - 7.5f * scale + dropletBob);
+        Raylib.DrawCircleV(puffCluster, 3.8f * scale + 1.2f * scale, HanoiPalette.CartoonOutline);
+        Raylib.DrawCircleV(puffCluster + new Vector2(0f, 1.0f * scale), 3.8f * scale, HanoiPalette.BeMayCloudShadow);
+        Raylib.DrawCircleV(puffCluster, 3.8f * scale, HanoiPalette.BeMayCloudWhite);
+        Raylib.DrawCircleV(new Vector2(puffCluster.X - 3.5f * scale, puffCluster.Y + 0.5f * scale), 2.4f * scale, HanoiPalette.BeMayCloudWhite);
+
+        Vector2 dropLeft = new(cloudCenter.X - 28f * scale, feetPos.Y - 4.5f * scale + MathF.Sin(animTime * 2.6f) * 1.2f * scale);
+        Raylib.DrawCircleV(dropLeft, 1.4f * scale, HanoiPalette.BeMayCloudWhite);
+
+        Vector2 puffRight = new(cloudCenter.X + 17f * scale, feetPos.Y - 6.5f * scale + MathF.Sin(animTime * 2.8f + 1f) * 1.4f * scale);
+        Raylib.DrawCircleV(puffRight, 2.8f * scale + 1.0f * scale, HanoiPalette.CartoonOutline);
+        Raylib.DrawCircleV(puffRight + new Vector2(0f, 0.8f * scale), 2.8f * scale, HanoiPalette.BeMayCloudShadow);
+        Raylib.DrawCircleV(puffRight, 2.8f * scale, HanoiPalette.BeMayCloudWhite);
+
+        Vector2 dropRight = new(cloudCenter.X + 25f * scale, feetPos.Y - 3.5f * scale + MathF.Sin(animTime * 3.0f + 2f) * 1.0f * scale);
+        Raylib.DrawCircleV(dropRight, 1.3f * scale, HanoiPalette.BeMayCloudWhite);
+
+        // Fluffy multi-lobed cloud body silhouette
+        (Vector2 Offset, float Radius)[] puffs =
+        [
+            (new Vector2(0f, 0f), 17.0f * scale),                                              // Center core
+            (new Vector2(-14.0f * scale * stretchX, 1.0f * scale * stretchY), 13.5f * scale),  // Mid-left
+            (new Vector2(+14.0f * scale * stretchX, 1.0f * scale * stretchY), 13.5f * scale),  // Mid-right
+            (new Vector2(-22.0f * scale * stretchX, 3.5f * scale * stretchY), 10.5f * scale),  // Far-left cheek puff
+            (new Vector2(+22.0f * scale * stretchX, 3.5f * scale * stretchY), 10.5f * scale),  // Far-right cheek puff
+            (new Vector2(-16.0f * scale * stretchX, -8.5f * scale * stretchY), 11.0f * scale), // Upper-left lobe
+            (new Vector2(+16.0f * scale * stretchX, -8.5f * scale * stretchY), 11.0f * scale), // Upper-right lobe
+            (new Vector2(-8.0f * scale * stretchX, -15.0f * scale * stretchY), 10.5f * scale), // Top-left shoulder
+            (new Vector2(+8.0f * scale * stretchX, -15.0f * scale * stretchY), 10.5f * scale), // Top-right shoulder
+            (new Vector2(0f, -14.0f * scale * stretchY), 11.5f * scale),                       // Top crown plateau
+            (new Vector2(-12.5f * scale * stretchX, 11.5f * scale * stretchY), 9.0f * scale),  // Lower-left underbelly
+            (new Vector2(+12.5f * scale * stretchX, 11.5f * scale * stretchY), 9.0f * scale),  // Lower-right underbelly
+            (new Vector2(-4.0f * scale * stretchX, 13.5f * scale * stretchY), 7.5f * scale),   // Bottom ripple left
+            (new Vector2(+4.0f * scale * stretchX, 13.5f * scale * stretchY), 7.5f * scale)    // Bottom ripple right
+        ];
+
+        // Pass 1: Outer cartoon outline silhouette
+        for (int i = 0; i < puffs.Length; i++)
+        {
+            Raylib.DrawCircleV(cloudCenter + puffs[i].Offset, puffs[i].Radius + 2.0f * scale, HanoiPalette.CartoonOutline);
+        }
+
+        // Pass 2: Pale lavender-blue underbelly shadow puffs
+        Vector2 shadowShift = new(0f, 3.2f * scale * stretchY);
+        for (int i = 0; i < puffs.Length; i++)
+        {
+            Raylib.DrawCircleV(cloudCenter + puffs[i].Offset + shadowShift, puffs[i].Radius, HanoiPalette.BeMayCloudShadow);
+        }
+
+        // Pass 3: Fluffy milk-white pastel cloud body puffs
+        for (int i = 0; i < puffs.Length; i++)
+        {
+            Raylib.DrawCircleV(cloudCenter + puffs[i].Offset, puffs[i].Radius, HanoiPalette.BeMayCloudWhite);
+        }
+
+        // Pass 4: Subtle decorative cloud body swirl on upper right
+        Vector2 swirlCenter = new(cloudCenter.X + 15.0f * scale * stretchX, cloudCenter.Y - 6.5f * scale * stretchY);
+        Raylib.DrawRing(swirlCenter, 2.5f * scale, 3.8f * scale, 120f, 330f, 16, HanoiPalette.BeMayCloudSwirl);
+        Raylib.DrawRing(new Vector2(swirlCenter.X - 1.2f * scale, swirlCenter.Y - 0.8f * scale), 1.0f * scale, 2.2f * scale, 270f, 460f, 12, HanoiPalette.BeMayCloudSwirl);
+
+        // Party Cone Hat with Pom-Pom perched on head
+        float crestFacingOff = (facing == FacingDirection.Left ? -2f : (facing == FacingDirection.Right ? 2f : 0f)) * scale;
+        Vector2 hatBaseCenter = new(cloudCenter.X + crestFacingOff, cloudCenter.Y - 14.5f * scale * stretchY);
+        Vector2 hatApex = hatBaseCenter + new Vector2(0.5f * scale, -22.0f * scale);
+        Vector2 hatBaseLeft = hatBaseCenter + new Vector2(-8.5f * scale, 0.5f * scale);
+        Vector2 hatBaseRight = hatBaseCenter + new Vector2(8.5f * scale, 0.5f * scale);
+
+        // Interpolated stripe bands for party hat (Cream top, Yellow middle, Pink bottom)
+        Vector2 band1Left = Vector2.Lerp(hatApex, hatBaseLeft, 0.52f);
+        Vector2 band1Right = Vector2.Lerp(hatApex, hatBaseRight, 0.52f);
+        Vector2 band2Left = Vector2.Lerp(hatApex, hatBaseLeft, 0.78f);
+        Vector2 band2Right = Vector2.Lerp(hatApex, hatBaseRight, 0.78f);
+
+        // Fill bands
+        Raylib.DrawTriangle(band1Right, hatApex, band1Left, HanoiPalette.BeMayHatCream);
+        Raylib.DrawTriangle(band2Right, band1Right, band1Left, HanoiPalette.BeMayHatYellow);
+        Raylib.DrawTriangle(band1Left, band2Left, band2Right, HanoiPalette.BeMayHatYellow);
+        Raylib.DrawTriangle(hatBaseRight, band2Right, band2Left, HanoiPalette.BeMayHatPink);
+        Raylib.DrawTriangle(band2Left, hatBaseLeft, hatBaseRight, HanoiPalette.BeMayHatPink);
+
+        // Outer hat outlines and band dividers
+        Raylib.DrawTriangleLines(hatBaseRight, hatApex, hatBaseLeft, HanoiPalette.CartoonOutline);
+        Raylib.DrawLineEx(band1Left, band1Right, 1.2f * scale, HanoiPalette.CartoonOutline);
+        Raylib.DrawLineEx(band2Left, band2Right, 1.2f * scale, HanoiPalette.CartoonOutline);
+
+        // Fluffy pom-pom on top of party hat
+        Vector2 pomCenter = hatApex + new Vector2(0f, -0.8f * scale);
+        Raylib.DrawCircleV(pomCenter, 3.2f * scale + 1.2f * scale, HanoiPalette.CartoonOutline);
+        Raylib.DrawCircleV(pomCenter, 3.2f * scale, HanoiPalette.BeMayHatCream);
+        Raylib.DrawCircleV(new Vector2(pomCenter.X - 0.8f * scale, pomCenter.Y - 1.0f * scale), 1.0f * scale, Color.White);
+
+        // Diagonal leather strap from upper left chest to lower right pouch
+        Vector2 strapStart = new(cloudCenter.X - 14.5f * scale * stretchX, cloudCenter.Y - 7.5f * scale * stretchY);
+        Vector2 strapEnd = new(cloudCenter.X + 4.5f * scale * stretchX, cloudCenter.Y + 8.5f * scale * stretchY);
+        Raylib.DrawLineEx(strapStart, strapEnd, 3.6f * scale, HanoiPalette.CartoonOutline);
+        Raylib.DrawLineEx(strapStart, strapEnd, 2.4f * scale, HanoiPalette.BeMayLeatherDark);
+
+        // Small buckle ring connector
+        Raylib.DrawCircleV(strapEnd, 2.0f * scale, HanoiPalette.CartoonOutline);
+        Raylib.DrawCircleV(strapEnd, 1.2f * scale, Color.White);
+
+        // Rounded leather gourd/canteen pouch hanging on the strap
+        float gourdX = strapEnd.X + (facing == FacingDirection.Left ? -10.5f : 6.5f) * scale * stretchX;
+        float gourdY = strapEnd.Y + 2.5f * scale * stretchY;
+        Vector2 gourdCenter = new(gourdX, gourdY);
+
+        // Gourd neck / cap
+        Rectangle neckRec = new(gourdCenter.X - 2.2f * scale, gourdCenter.Y - 5.5f * scale, 4.4f * scale, 3.2f * scale);
+        DrawRoundedRect(neckRec, 0.35f, HanoiPalette.BeMayLeatherDark, HanoiPalette.CartoonOutline, 1.0f * scale, withShadow: false);
+
+        // Gourd rounded body & highlight
+        DrawCartoonCircle(gourdCenter, 5.8f * scale, HanoiPalette.BeMayGourdBrown, HanoiPalette.CartoonOutline, 1.2f * scale, withShadow: false);
+        Raylib.DrawCircleV(gourdCenter + new Vector2(-1.4f * scale, -1.2f * scale), 2.2f * scale, HanoiPalette.BeMayGourdHighlight);
+        Raylib.DrawCircleV(gourdCenter + new Vector2(-1.8f * scale, -1.6f * scale), 0.9f * scale, Color.White);
+
+        // Facial Features (Visible when not facing Away/Up)
+        if (facing != FacingDirection.Up)
+        {
+            float eyeXOff = (facing == FacingDirection.Left) ? -2.8f * scale : (facing == FacingDirection.Right ? 2.8f * scale : 0f);
+
+            // Left blush cheek with anime blush hatching
+            Vector2 leftCheek = new(cloudCenter.X - 15.0f * scale + eyeXOff * 0.6f, cloudCenter.Y + 4.5f * scale * stretchY);
+            Raylib.DrawEllipse((int)leftCheek.X, (int)leftCheek.Y, 4.5f * scale, 3.5f * scale, new Color(243, 167, 181, 230));
+            Raylib.DrawLineEx(new Vector2(leftCheek.X - 1.5f * scale, leftCheek.Y - 2.0f * scale), new Vector2(leftCheek.X - 1.0f * scale, leftCheek.Y + 2.0f * scale), 1.0f * scale, new Color(225, 140, 155, 230));
+            Raylib.DrawLineEx(new Vector2(leftCheek.X + 1.0f * scale, leftCheek.Y - 2.0f * scale), new Vector2(leftCheek.X + 1.5f * scale, leftCheek.Y + 2.0f * scale), 1.0f * scale, new Color(225, 140, 155, 230));
+
+            // Chibi anime eyes with catchlights & blinking
+            Vector2 leftEye = new(cloudCenter.X - 7.5f * scale + eyeXOff, cloudCenter.Y - 1.5f * scale * stretchY);
+            Vector2 rightEye = new(cloudCenter.X + 4.5f * scale + eyeXOff, cloudCenter.Y - 1.5f * scale * stretchY);
+
+            bool isBlinking = (animTime % 3.6f) < 0.14f;
+            if (isBlinking)
+            {
+                Raylib.DrawLineEx(new Vector2(leftEye.X - 2.8f * scale, leftEye.Y), new Vector2(leftEye.X + 2.8f * scale, leftEye.Y), 1.8f * scale, HanoiPalette.CartoonOutline);
+                Raylib.DrawLineEx(new Vector2(rightEye.X - 2.8f * scale, rightEye.Y), new Vector2(rightEye.X + 2.8f * scale, rightEye.Y), 1.8f * scale, HanoiPalette.CartoonOutline);
+            }
+            else
+            {
+                // Expressive dark eye bodies with rounded rectangle contour
+                Rectangle leftEyeRec = new(leftEye.X - 2.8f * scale, leftEye.Y - 3.0f * scale, 5.6f * scale, 6.0f * scale);
+                Rectangle rightEyeRec = new(rightEye.X - 2.8f * scale, rightEye.Y - 3.0f * scale, 5.6f * scale, 6.0f * scale);
+                Raylib.DrawRectangleRounded(leftEyeRec, 0.45f, 6, HanoiPalette.CartoonOutline);
+                Raylib.DrawRectangleRounded(rightEyeRec, 0.45f, 6, HanoiPalette.CartoonOutline);
+
+                // Determined brow tilts on top of eyes
+                Raylib.DrawLineEx(new Vector2(leftEyeRec.X - 0.4f * scale, leftEyeRec.Y - 0.2f * scale), new Vector2(leftEyeRec.X + leftEyeRec.Width + 0.6f * scale, leftEyeRec.Y + 0.8f * scale), 1.2f * scale, HanoiPalette.CartoonOutline);
+                Raylib.DrawLineEx(new Vector2(rightEyeRec.X - 0.6f * scale, rightEyeRec.Y + 0.8f * scale), new Vector2(rightEyeRec.X + rightEyeRec.Width + 0.4f * scale, rightEyeRec.Y - 0.2f * scale), 1.2f * scale, HanoiPalette.CartoonOutline);
+
+                // Primary bright sparkle highlights
+                Raylib.DrawCircleV(new Vector2(leftEye.X + 1.1f * scale, leftEye.Y - 1.1f * scale), 1.5f * scale, Color.White);
+                Raylib.DrawCircleV(new Vector2(rightEye.X + 1.1f * scale, rightEye.Y - 1.1f * scale), 1.5f * scale, Color.White);
+
+                // Secondary subtle catchlights
+                Raylib.DrawCircleV(new Vector2(leftEye.X - 1.1f * scale, leftEye.Y + 1.1f * scale), 0.8f * scale, Color.White);
+                Raylib.DrawCircleV(new Vector2(rightEye.X - 1.1f * scale, rightEye.Y + 1.1f * scale), 0.8f * scale, Color.White);
+            }
+
+            // Cheerful open smile
+            Vector2 mouthCenter = new(cloudCenter.X - 1.5f * scale + eyeXOff * 0.5f, cloudCenter.Y + 3.2f * scale * stretchY);
+            Rectangle mouthRec = new(mouthCenter.X - 2.4f * scale, mouthCenter.Y - 0.8f * scale, 4.8f * scale, 3.4f * scale);
+            Raylib.DrawRectangleRounded(mouthRec, 0.7f, 6, Color.White);
+            Raylib.DrawRectangleRoundedLinesEx(mouthRec, 0.7f, 6, 1.4f * scale, HanoiPalette.CartoonOutline);
+        }
     }
 
     public static void DrawButChi(Vector2 floatingPos, float animTime, float scale = 1.0f)
     {
+        if (!Raylib.IsWindowReady()) return;
+
         float hoverY = MathF.Sin(animTime * 3.5f) * 6f * scale;
         Vector2 center = new(floatingPos.X, floatingPos.Y + hoverY);
 
         // Ground shadow scales inversely with altitude
-        float shadowAlpha = 0.25f - (hoverY / (30f * scale));
-        Raylib.DrawEllipse((int)floatingPos.X, (int)(floatingPos.Y + 24f * scale), 10f * scale, 5f * scale, Raylib.ColorAlpha(Color.Black, Math.Clamp(shadowAlpha, 0.1f, 0.35f)));
+        float shadowAlpha = Math.Clamp(0.28f - (hoverY / (30f * scale)), 0.10f, 0.38f);
+        Raylib.DrawEllipse((int)floatingPos.X, (int)(floatingPos.Y + 24f * scale), 10f * scale, 5f * scale, Raylib.ColorAlpha(Color.Black, shadowAlpha));
 
-        // Hexagonal Pencil Body
-        Rectangle body = new(center.X - 5f * scale, center.Y - 12f * scale, 10f * scale, 22f * scale);
-        DrawRoundedRect(body, 0.2f, HanoiPalette.ButChiYellow, HanoiPalette.CartoonOutline, 1.2f * scale, withShadow: false);
+        // 3-facet hexagonal wooden pencil body
+        Rectangle leftFacet = new(center.X - 5.5f * scale, center.Y - 12f * scale, 3.5f * scale, 22f * scale);
+        Rectangle centerFacet = new(center.X - 2.0f * scale, center.Y - 12f * scale, 4.0f * scale, 22f * scale);
+        Rectangle rightFacet = new(center.X + 2.0f * scale, center.Y - 12f * scale, 3.5f * scale, 22f * scale);
 
-        // Eraser & Collar
-        Rectangle collar = new(center.X - 5f * scale, center.Y - 16f * scale, 10f * scale, 4f * scale);
-        Raylib.DrawRectangleRec(collar, HanoiPalette.ButChiFerrule);
-        Rectangle eraser = new(center.X - 5f * scale, center.Y - 21f * scale, 10f * scale, 5f * scale);
-        Raylib.DrawRectangleRounded(eraser, 0.4f, 4, HanoiPalette.ButChiEraserPink);
+        Raylib.DrawRectangleRec(leftFacet, new Color(230, 180, 50, 255));   // Warm shadow facet
+        Raylib.DrawRectangleRec(centerFacet, HanoiPalette.ButChiYellow);     // Sunny body facet
+        Raylib.DrawRectangleRec(rightFacet, new Color(255, 238, 130, 255));  // Sunlit highlight facet
 
-        // Sharpened Wooden Tip & Graphite
-        Vector2 tipApex = new(center.X, center.Y + 18f * scale);
-        Vector2 tipLeft = new(center.X - 5f * scale, center.Y + 10f * scale);
-        Vector2 tipRight = new(center.X + 5f * scale, center.Y + 10f * scale);
+        // Glowing cyan horizontal magic accent band in center
+        Rectangle magicCore = new(center.X - 5.5f * scale, center.Y - 2.0f * scale, 11f * scale, 4.0f * scale);
+        Raylib.DrawRectangleRec(magicCore, Raylib.ColorAlpha(HanoiPalette.ButChiMagicCyan, 0.35f));
+        Raylib.DrawLineEx(new Vector2(center.X - 4.5f * scale, center.Y), new Vector2(center.X + 4.5f * scale, center.Y), 2.2f * scale, HanoiPalette.ButChiMagicCyan);
+        Raylib.DrawCircleV(new Vector2(center.X, center.Y), 1.5f * scale, Color.White);
+
+        // Facet seams and outer body outline
+        Raylib.DrawLineEx(new Vector2(center.X - 2.0f * scale, center.Y - 12f * scale), new Vector2(center.X - 2.0f * scale, center.Y + 10f * scale), 1.0f * scale, HanoiPalette.CartoonOutline);
+        Raylib.DrawLineEx(new Vector2(center.X + 2.0f * scale, center.Y - 12f * scale), new Vector2(center.X + 2.0f * scale, center.Y + 10f * scale), 1.0f * scale, HanoiPalette.CartoonOutline);
+        Raylib.DrawRectangleLinesEx(new Rectangle(center.X - 5.5f * scale, center.Y - 12f * scale, 11f * scale, 22f * scale), 1.2f * scale, HanoiPalette.CartoonOutline);
+
+        // Dark ferrule band with silver highlight
+        Rectangle ferrule = new(center.X - 5.5f * scale, center.Y - 16.5f * scale, 11f * scale, 4.5f * scale);
+        Raylib.DrawRectangleRec(ferrule, new Color(42, 44, 52, 255));
+        Raylib.DrawRectangleLinesEx(ferrule, 1.2f * scale, HanoiPalette.CartoonOutline);
+        Raylib.DrawLineEx(new Vector2(ferrule.X + 1f * scale, ferrule.Y + 2.2f * scale), new Vector2(ferrule.X + ferrule.Width - 1f * scale, ferrule.Y + 2.2f * scale), 1.0f * scale, HanoiPalette.ButChiFerrule);
+        Raylib.DrawLineEx(new Vector2(center.X + 2f * scale, ferrule.Y), new Vector2(center.X + 2f * scale, ferrule.Y + ferrule.Height), 1.0f * scale, Raylib.ColorAlpha(Color.White, 0.75f));
+
+        // Rounded pink eraser
+        Rectangle eraser = new(center.X - 5.5f * scale, center.Y - 22f * scale, 11f * scale, 5.5f * scale);
+        Raylib.DrawRectangleRounded(eraser, 0.45f, 6, HanoiPalette.ButChiEraserPink);
+        Raylib.DrawRectangleRoundedLinesEx(eraser, 0.45f, 6, 1.2f * scale, HanoiPalette.CartoonOutline);
+
+        // Sharpened wooden collar & graphite tip
+        Vector2 tipApex = new(center.X, center.Y + 20f * scale);
+        Vector2 tipLeft = new(center.X - 5.5f * scale, center.Y + 10f * scale);
+        Vector2 tipRight = new(center.X + 5.5f * scale, center.Y + 10f * scale);
         Raylib.DrawTriangle(tipRight, tipApex, tipLeft, HanoiPalette.ButChiWoodCollar);
-        Raylib.DrawTriangle(tipRight, tipApex, new Vector2(center.X, center.Y + 14f * scale), HanoiPalette.ButChiGraphite);
+        Raylib.DrawTriangleLines(tipRight, tipApex, tipLeft, HanoiPalette.CartoonOutline);
 
-        // Glowing Magical Cyan Sparkle at tip
-        float sparkPulse = 2f + MathF.Sin(animTime * 8f) * 1.5f;
-        Raylib.DrawCircleV(tipApex, sparkPulse * scale, HanoiPalette.ButChiMagicCyan);
+        // Graphite tip
+        Vector2 graphLeft = new(center.X - 2.8f * scale, center.Y + 14.5f * scale);
+        Vector2 graphRight = new(center.X + 2.8f * scale, center.Y + 14.5f * scale);
+        Raylib.DrawTriangle(graphRight, tipApex, graphLeft, HanoiPalette.ButChiGraphite);
 
-        // Blinking Cartoon Eyes
-        bool isBlinking = (animTime % 4.0f) < 0.15f;
-        if (!isBlinking)
+        // Brilliant glowing cyan magical orb below tip
+        Vector2 orbCenter = tipApex + new Vector2(0f, 6.0f * scale);
+        float sparkPulse = 1.0f + 0.18f * MathF.Sin(animTime * 6f);
+        Raylib.DrawCircleV(orbCenter, 10.0f * scale * sparkPulse, Raylib.ColorAlpha(HanoiPalette.ButChiMagicCyan, 0.18f));
+        Raylib.DrawCircleV(orbCenter, 6.0f * scale * sparkPulse, Raylib.ColorAlpha(HanoiPalette.ButChiMagicCyan, 0.45f));
+        Raylib.DrawCircleV(orbCenter, 3.8f * scale * sparkPulse, HanoiPalette.ButChiMagicCyan);
+        Raylib.DrawCircleV(orbCenter, 1.6f * scale, Color.White);
+
+        // Dynamic swirling magic energy vortex rings
+        Raylib.DrawRing(orbCenter, 7.5f * scale, 9.5f * scale, animTime * 140f, animTime * 140f + 250f, 24, Raylib.ColorAlpha(HanoiPalette.ButChiMagicCyan, 0.55f));
+        Raylib.DrawRing(orbCenter, 9.5f * scale, 11.0f * scale, -animTime * 110f, -animTime * 110f + 210f, 24, Raylib.ColorAlpha(HanoiPalette.ButChiMagicCyan, 0.35f));
+
+        // Procedural 4-point magic cross sparkles (+)
+        DrawMagicCrossSparkle(new Vector2(center.X + 16.5f * scale, center.Y + 4.0f * scale), 4.8f * scale, HanoiPalette.ButChiMagicCyan);
+        DrawMagicCrossSparkle(new Vector2(orbCenter.X + 10.0f * scale, orbCenter.Y - 5.0f * scale), 3.2f * scale, HanoiPalette.ButChiMagicCyan);
+        DrawMagicCrossSparkle(new Vector2(orbCenter.X - 9.5f * scale, orbCenter.Y + 7.0f * scale), 2.6f * scale, HanoiPalette.ButChiMagicCyan);
+    }
+
+    private static void DrawMagicCrossSparkle(Vector2 center, float size, Color color)
+    {
+        Raylib.DrawLineEx(new Vector2(center.X - size, center.Y), new Vector2(center.X + size, center.Y), 1.6f, color);
+        Raylib.DrawLineEx(new Vector2(center.X, center.Y - size), new Vector2(center.X, center.Y + size), 1.6f, color);
+        Raylib.DrawCircleV(center, 0.9f, Color.White);
+    }
+
+    public static void DrawBongXam(Vector2 centerPos, float animTime, float scale = 1.0f)
+    {
+        if (!Raylib.IsWindowReady()) return;
+
+        // Heavy somber floating motion
+        float hoverY = MathF.Sin(animTime * 1.8f) * 5.0f * scale;
+        Vector2 pos = new(centerPos.X, centerPos.Y + hoverY);
+
+        // Ground shadow
+        float shadowAlpha = Math.Clamp(0.30f - (hoverY / (40f * scale)), 0.15f, 0.40f);
+        Raylib.DrawEllipse((int)centerPos.X, (int)(centerPos.Y + 28f * scale), 22f * scale, 8f * scale, Raylib.ColorAlpha(Color.Black, shadowAlpha));
+
+        // 5 storm violet puffs
+        (Vector2 Offset, float Radius)[] puffs =
+        [
+            (new Vector2(0f, 0f), 17.0f * scale),
+            (new Vector2(-14.0f * scale, 2.0f * scale), 13.0f * scale),
+            (new Vector2(+14.0f * scale, 2.0f * scale), 13.0f * scale),
+            (new Vector2(-8.0f * scale, -10.0f * scale), 11.0f * scale),
+            (new Vector2(+8.0f * scale, -9.0f * scale), 12.0f * scale)
+        ];
+
+        // Pass 1: Dark outline silhouette
+        for (int i = 0; i < puffs.Length; i++)
         {
-            Raylib.DrawCircleV(new Vector2(center.X - 2.5f * scale, center.Y - 2f * scale), 1.5f * scale, HanoiPalette.CartoonOutline);
-            Raylib.DrawCircleV(new Vector2(center.X + 2.5f * scale, center.Y - 2f * scale), 1.5f * scale, HanoiPalette.CartoonOutline);
-            Raylib.DrawCircleV(new Vector2(center.X - 2.2f * scale, center.Y - 2.5f * scale), 0.5f * scale, Color.White);
-            Raylib.DrawCircleV(new Vector2(center.X + 2.8f * scale, center.Y - 2.5f * scale), 0.5f * scale, Color.White);
+            Raylib.DrawCircleV(pos + puffs[i].Offset, puffs[i].Radius + 1.8f * scale, HanoiPalette.BongXamOutline);
+        }
+
+        // Pass 2: Deep storm shadow puffs
+        Vector2 shadowShift = new(0f, 3.0f * scale);
+        for (int i = 0; i < puffs.Length; i++)
+        {
+            Raylib.DrawCircleV(pos + puffs[i].Offset + shadowShift, puffs[i].Radius, HanoiPalette.BongXamStormShadow);
+        }
+
+        // Pass 3: Storm cloud body puffs
+        for (int i = 0; i < puffs.Length; i++)
+        {
+            Raylib.DrawCircleV(pos + puffs[i].Offset, puffs[i].Radius, HanoiPalette.BongXamStormBody);
+        }
+
+        // Pass 4: Misty lavender highlight puffs
+        for (int i = 0; i < puffs.Length; i++)
+        {
+            Raylib.DrawCircleV(pos + puffs[i].Offset + new Vector2(0f, -2.5f * scale), puffs[i].Radius * 0.7f, Raylib.ColorAlpha(HanoiPalette.BongXamHighlight, 0.45f));
+        }
+
+        // Soulful sad expressive eyes with teary gloss
+        Vector2 leftEye = new(pos.X - 6.0f * scale, pos.Y - 2.0f * scale);
+        Vector2 rightEye = new(pos.X + 6.0f * scale, pos.Y - 2.0f * scale);
+
+        // Sad drooping brow shadows
+        Raylib.DrawLineEx(new Vector2(leftEye.X - 3.5f * scale, leftEye.Y - 4.5f * scale), new Vector2(leftEye.X + 2.5f * scale, leftEye.Y - 3.0f * scale), 1.5f * scale, HanoiPalette.BongXamOutline);
+        Raylib.DrawLineEx(new Vector2(rightEye.X + 3.5f * scale, rightEye.Y - 4.5f * scale), new Vector2(rightEye.X - 2.5f * scale, rightEye.Y - 3.0f * scale), 1.5f * scale, HanoiPalette.BongXamOutline);
+
+        // Deep dark pupils
+        Raylib.DrawCircleV(leftEye, 2.8f * scale, HanoiPalette.BongXamOutline);
+        Raylib.DrawCircleV(rightEye, 2.8f * scale, HanoiPalette.BongXamOutline);
+
+        // Tear sheen at bottom of eyes
+        Raylib.DrawCircleSector(new Vector2(leftEye.X, leftEye.Y + 0.8f * scale), 2.0f * scale, 0f, 180f, 8, Raylib.ColorAlpha(new Color(190, 215, 255, 255), 0.8f));
+        Raylib.DrawCircleSector(new Vector2(rightEye.X, rightEye.Y + 0.8f * scale), 2.0f * scale, 0f, 180f, 8, Raylib.ColorAlpha(new Color(190, 215, 255, 255), 0.8f));
+
+        // Small glimmer
+        Raylib.DrawCircleV(new Vector2(leftEye.X - 0.8f * scale, leftEye.Y - 0.8f * scale), 0.8f * scale, Color.White);
+        Raylib.DrawCircleV(new Vector2(rightEye.X - 0.8f * scale, rightEye.Y - 0.8f * scale), 0.8f * scale, Color.White);
+
+        // Sad mouth
+        Vector2 mouthCenter = new(pos.X, pos.Y + 5.5f * scale);
+        Raylib.DrawCircleSector(mouthCenter, 2.0f * scale, 180f, 360f, 8, HanoiPalette.BongXamOutline);
+
+        // Falling mist droplets
+        for (int k = 0; k < 4; k++)
+        {
+            float dropCycle = (animTime * 1.4f + k * 0.35f) % 1.0f;
+            float dropX = pos.X + ((k - 1.5f) * 8.5f * scale);
+            float dropY = pos.Y + (13.0f * scale) + dropCycle * (22.0f * scale);
+            float dropAlpha = (1.0f - dropCycle) * 0.7f;
+            Raylib.DrawEllipse((int)dropX, (int)dropY, 1.2f * scale, 2.6f * scale, Raylib.ColorAlpha(HanoiPalette.BongXamHighlight, dropAlpha));
+        }
+    }
+
+    // =========================================================================
+    // Authentic Pixel Art Stall Sprites (Ba An Pho, Bac Tu Beef, Co Lan Veggie)
+    // =========================================================================
+
+    private static Texture2D _texBaAnPho;
+    private static bool _texBaAnPhoLoaded;
+    private static Texture2D _texBacTuBeef;
+    private static bool _texBacTuBeefLoaded;
+    private static Texture2D _texCoLanVeggie;
+    private static bool _texCoLanVeggieLoaded;
+
+    public static string ResolveTexturePath(string filename)
+    {
+        string[] candidates =
+        [
+            Path.Combine("Data", filename),
+            Path.Combine("Data", "Sprites", filename),
+            Path.Combine(AppContext.BaseDirectory, "Data", filename),
+            Path.Combine(AppContext.BaseDirectory, "Data", "Sprites", filename),
+            Path.Combine(AppContext.BaseDirectory, filename),
+            filename
+        ];
+        foreach (var c in candidates)
+        {
+            if (File.Exists(c)) return c;
+        }
+        return Path.Combine("Data", filename);
+    }
+
+    private static Texture2D GetOrCreateStallTexture(ref Texture2D texture, ref bool loaded, string filename)
+    {
+        if (!loaded && Raylib.IsWindowReady())
+        {
+            string path = ResolveTexturePath(filename);
+            if (File.Exists(path))
+            {
+                texture = Raylib.LoadTexture(path);
+                Raylib.SetTextureFilter(texture, TextureFilter.Bilinear);
+            }
+            loaded = true;
+        }
+        return texture;
+    }
+
+    public static void UnloadStallTextures()
+    {
+        if (_texBaAnPhoLoaded)
+        {
+            if (_texBaAnPho.Id > 0 && Raylib.IsWindowReady()) Raylib.UnloadTexture(_texBaAnPho);
+            _texBaAnPho = default;
+            _texBaAnPhoLoaded = false;
+        }
+        if (_texBacTuBeefLoaded)
+        {
+            if (_texBacTuBeef.Id > 0 && Raylib.IsWindowReady()) Raylib.UnloadTexture(_texBacTuBeef);
+            _texBacTuBeef = default;
+            _texBacTuBeefLoaded = false;
+        }
+        if (_texCoLanVeggieLoaded)
+        {
+            if (_texCoLanVeggie.Id > 0 && Raylib.IsWindowReady()) Raylib.UnloadTexture(_texCoLanVeggie);
+            _texCoLanVeggie = default;
+            _texCoLanVeggieLoaded = false;
+        }
+    }
+
+    public static void DrawStallSprite(Texture2D texture, Vector2 pos, float scale = 1.0f, bool withShadow = true)
+    {
+        if (texture.Id == 0) return;
+
+        // Ground shadow
+        if (withShadow)
+        {
+            Raylib.DrawEllipse((int)pos.X, (int)pos.Y, 56f * scale, 12f * scale, Raylib.ColorAlpha(Color.Black, 0.28f));
+        }
+
+        float renderWidth = 124f * scale;
+        float renderHeight = renderWidth * ((float)texture.Height / texture.Width);
+
+        Rectangle srcRec = new(0f, 0f, texture.Width, texture.Height);
+        Rectangle destRec = new(pos.X - renderWidth * 0.5f, pos.Y - renderHeight, renderWidth, renderHeight);
+
+        Raylib.DrawTexturePro(texture, srcRec, destRec, Vector2.Zero, 0.0f, Color.White);
+    }
+
+    public static void DrawBaAnPhoStall(Vector2 pos, string stallName, float animTime)
+    {
+        DrawBaAnPhoStall(pos, stallName, animTime, 1.0f, true);
+    }
+
+    public static void DrawBaAnPhoStall(Vector2 pos, string stallName, float animTime, float scale)
+    {
+        DrawBaAnPhoStall(pos, stallName, animTime, scale, true);
+    }
+
+    public static void DrawBaAnPhoStall(Vector2 pos, string stallName, float animTime, float scale, bool withShadow)
+    {
+        if (!Raylib.IsWindowReady()) return;
+        var tex = GetOrCreateStallTexture(ref _texBaAnPho, ref _texBaAnPhoLoaded, "stall_baan_pho.png");
+        if (tex.Id > 0)
+        {
+            DrawStallSprite(tex, pos, scale, withShadow);
         }
         else
         {
-            Raylib.DrawLineEx(new Vector2(center.X - 4f * scale, center.Y - 2f * scale), new Vector2(center.X - 1f * scale, center.Y - 2f * scale), 1f, HanoiPalette.CartoonOutline);
-            Raylib.DrawLineEx(new Vector2(center.X + 1f * scale, center.Y - 2f * scale), new Vector2(center.X + 4f * scale, center.Y - 2f * scale), 1f, HanoiPalette.CartoonOutline);
+            DrawMarketStall(pos, stallName, HanoiPalette.TerracottaRoof, HanoiPalette.WallYellow, scale);
+        }
+    }
+
+    public static void DrawBacTuBeefStall(Vector2 pos, string stallName, float animTime)
+    {
+        DrawBacTuBeefStall(pos, stallName, animTime, 1.0f, true);
+    }
+
+    public static void DrawBacTuBeefStall(Vector2 pos, string stallName, float animTime, float scale)
+    {
+        DrawBacTuBeefStall(pos, stallName, animTime, scale, true);
+    }
+
+    public static void DrawBacTuBeefStall(Vector2 pos, string stallName, float animTime, float scale, bool withShadow)
+    {
+        if (!Raylib.IsWindowReady()) return;
+        var tex = GetOrCreateStallTexture(ref _texBacTuBeef, ref _texBacTuBeefLoaded, "stall_bactu_beef.png");
+        if (tex.Id > 0)
+        {
+            DrawStallSprite(tex, pos, scale, withShadow);
+        }
+        else
+        {
+            DrawMarketStall(pos, stallName, HanoiPalette.ShutterGreen, HanoiPalette.WallYellowLight, scale);
+        }
+    }
+
+    public static void DrawCoLanVeggieStall(Vector2 pos, string stallName, float animTime)
+    {
+        DrawCoLanVeggieStall(pos, stallName, animTime, 1.0f, true);
+    }
+
+    public static void DrawCoLanVeggieStall(Vector2 pos, string stallName, float animTime, float scale)
+    {
+        DrawCoLanVeggieStall(pos, stallName, animTime, scale, true);
+    }
+
+    public static void DrawCoLanVeggieStall(Vector2 pos, string stallName, float animTime, float scale, bool withShadow)
+    {
+        if (!Raylib.IsWindowReady()) return;
+        var tex = GetOrCreateStallTexture(ref _texCoLanVeggie, ref _texCoLanVeggieLoaded, "stall_colan_veggie.png");
+        if (tex.Id > 0)
+        {
+            DrawStallSprite(tex, pos, scale, withShadow);
+        }
+        else
+        {
+            DrawMarketStall(pos, stallName, HanoiPalette.TerracottaRoof, HanoiPalette.WallYellowLight, scale);
         }
     }
 
     public static void DrawFlowerBicycle(Vector2 pos, float animTime, float scale = 1.0f)
     {
+        if (!Raylib.IsWindowReady()) return;
         // Ground shadow
         Raylib.DrawEllipse((int)pos.X, (int)pos.Y, 38f * scale, 10f * scale, Raylib.ColorAlpha(Color.Black, 0.25f));
 
@@ -198,6 +621,7 @@ public static class VectorRenderer
 
     public static void DrawVintageCyclo(Vector2 pos, float scale = 1.0f)
     {
+        if (!Raylib.IsWindowReady()) return;
         // Ground shadow
         Raylib.DrawEllipse((int)pos.X, (int)pos.Y, 46f * scale, 12f * scale, Raylib.ColorAlpha(Color.Black, 0.28f));
 
@@ -223,6 +647,7 @@ public static class VectorRenderer
 
     public static void DrawBluePlasticTableAndStools(Vector2 pos, float scale = 1.0f)
     {
+        if (!Raylib.IsWindowReady()) return;
         // Ground shadow
         Raylib.DrawEllipse((int)pos.X, (int)pos.Y, 24f * scale, 8f * scale, Raylib.ColorAlpha(Color.Black, 0.22f));
 
@@ -240,6 +665,7 @@ public static class VectorRenderer
 
     public static void DrawMarketStall(Vector2 pos, string stallName, Color awning1, Color awning2, float scale = 1.0f)
     {
+        if (!Raylib.IsWindowReady()) return;
         // Ground shadow
         Raylib.DrawEllipse((int)pos.X, (int)pos.Y, 50f * scale, 14f * scale, Raylib.ColorAlpha(Color.Black, 0.26f));
 
@@ -269,6 +695,7 @@ public static class VectorRenderer
 
     public static void DrawInteractionPrompt(Vector2 pos, string keyText, string actionText, float animTime, float alpha = 1.0f)
     {
+        if (!Raylib.IsWindowReady()) return;
         if (alpha <= 0.01f) return;
 
         float floatOffset = MathF.Sin(animTime * 4.2f) * 3.5f;
@@ -297,6 +724,7 @@ public static class VectorRenderer
 
     public static void DrawCloseCross(Vector2 center, float size, Color color, float thickness = 2.0f)
     {
+        if (!Raylib.IsWindowReady()) return;
         float half = size * 0.5f;
         Raylib.DrawLineEx(new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half), thickness, color);
         Raylib.DrawLineEx(new Vector2(center.X + half, center.Y - half), new Vector2(center.X - half, center.Y + half), thickness, color);
@@ -304,6 +732,7 @@ public static class VectorRenderer
 
     public static void DrawCheckmark(Vector2 center, float size, Color color, float thickness = 2.0f)
     {
+        if (!Raylib.IsWindowReady()) return;
         Vector2 start = new(center.X - size * 0.45f, center.Y);
         Vector2 mid = new(center.X - size * 0.1f, center.Y + size * 0.35f);
         Vector2 end = new(center.X + size * 0.45f, center.Y - size * 0.45f);
@@ -313,6 +742,7 @@ public static class VectorRenderer
 
     public static void DrawFivePointStar(Vector2 center, float radius, Color fillColor, Color? outlineColor = null, float outlineWidth = 1.5f)
     {
+        if (!Raylib.IsWindowReady()) return;
         Span<Vector2> points = stackalloc Vector2[10];
         float innerRadius = radius * 0.42f;
         float angleStep = MathF.PI / 5f;
@@ -343,6 +773,7 @@ public static class VectorRenderer
 
     public static void DrawEnvelopeIcon(Vector2 center, float width, float height, Color bodyColor, Color flapColor, Color outlineColor)
     {
+        if (!Raylib.IsWindowReady()) return;
         Rectangle envRect = new(center.X - width * 0.5f, center.Y - height * 0.5f, width, height);
         Raylib.DrawRectangleRec(envRect, bodyColor);
         Raylib.DrawRectangleLinesEx(envRect, 1.2f, outlineColor);

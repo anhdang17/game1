@@ -18,6 +18,10 @@ public interface IInputService
     bool IsInteractJustPressed { get; }
     bool IsInteractPressed() => IsInteractJustPressed;
 
+    /// <summary>True on the exact frame the player triggers a dash via [LeftShift], [RightShift], or [Space].</summary>
+    bool IsDashJustPressed => false;
+    bool IsDashPressed() => IsDashJustPressed;
+
     /// <summary>True on the frame the player requests a companion hint via [H].</summary>
     bool IsHintJustPressed { get; }
     bool IsHintPressed() => IsHintJustPressed;

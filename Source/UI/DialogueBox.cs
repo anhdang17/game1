@@ -292,27 +292,53 @@ public sealed class DialogueBox
             }
         }
 
-        // 2. Main Box Background
+        // 2. Main Box Background — Handmade Dó Paper with Double Gold Trim
         Rectangle dialogRec = new(boxX, boxY, boxW, boxH);
-        VectorRenderer.DrawRoundedRect(dialogRec, 0.18f, new Color(254, 252, 246, 252), HanoiPalette.CartoonOutline, 2.5f);
+        VectorRenderer.DrawDropShadow(dialogRec, 0.16f, offsetY: 4f, alpha: 0.28f);
 
-        // Inner decorative border
-        Rectangle innerRec = new(boxX + 6f, boxY + 6f, boxW - 12f, boxH - 12f);
-        Raylib.DrawRectangleRoundedLinesEx(innerRec, 0.16f, 6, 1.0f, Raylib.ColorAlpha(HanoiPalette.TerracottaRoof, 0.25f));
+        // Deckled edge background base
+        Rectangle deckleRec = new(boxX - 2f, boxY - 2f, boxW + 4f, boxH + 4f);
+        Raylib.DrawRectangleRounded(deckleRec, 0.18f, 6, new Color(243, 234, 211, 255));
 
-        // 3. Avatar Portrait
+        // Handmade dó paper body
+        Raylib.DrawRectangleRounded(dialogRec, 0.16f, 6, new Color(250, 246, 236, 252));
+
+        // Outer gold border (#D4AF37)
+        Raylib.DrawRectangleRoundedLinesEx(dialogRec, 0.16f, 6, 2.2f, new Color(212, 175, 55, 255));
+
+        // Inner secondary gold trim
+        Rectangle innerRec = new(boxX + 5f, boxY + 5f, boxW - 10f, boxH - 10f);
+        Raylib.DrawRectangleRoundedLinesEx(innerRec, 0.14f, 6, 1.0f, new Color(230, 202, 101, 190));
+
+        // Corner Flourishes (Filigree accents at 4 corners)
+        DrawCornerFlourish(new Vector2(boxX + 8f, boxY + 8f), 1f, 1f);
+        DrawCornerFlourish(new Vector2(boxX + boxW - 8f, boxY + 8f), -1f, 1f);
+        DrawCornerFlourish(new Vector2(boxX + 8f, boxY + boxH - 8f), 1f, -1f);
+        DrawCornerFlourish(new Vector2(boxX + boxW - 8f, boxY + boxH - 8f), -1f, -1f);
+
+        // 3. Avatar Portrait with Ornate Golden Locket Frame
         float avatarCenterX = (AvatarPosition == "Right") ? (boxX + boxW - 65f) : (boxX + 65f);
         float avatarCenterY = boxY + boxH * 0.5f;
         DrawAvatar(CurrentAvatar, new Vector2(avatarCenterX, avatarCenterY), 42f);
 
-        // 4. Speaker Name Badge
+        // 4. Speaker Name Badge — Vermilion & Gold Lacquer Tag
         if (!string.IsNullOrEmpty(CurrentSpeaker))
         {
             Vector2 nameSz = FontManager.Instance.MeasureText(CurrentSpeaker, 15f);
             float badgeX = (AvatarPosition == "Right") ? (boxX + 30f) : (boxX + 130f);
-            Rectangle nameBadge = new(badgeX, boxY - 15f, nameSz.X + 28f, 30f);
-            VectorRenderer.DrawRoundedRect(nameBadge, 0.35f, HanoiPalette.WallYellow, HanoiPalette.CartoonOutline, 2.0f, withShadow: false);
-            FontManager.Instance.DrawText(CurrentSpeaker, new Vector2(nameBadge.X + 14f, nameBadge.Y + 6f), 15f, HanoiPalette.CartoonOutline);
+            Rectangle nameBadge = new(badgeX, boxY - 16f, nameSz.X + 32f, 32f);
+
+            // Shadow
+            VectorRenderer.DrawDropShadow(nameBadge, 0.35f, offsetY: 2f, alpha: 0.25f);
+            // Vermilion lacquer body (#BC2C1C)
+            Raylib.DrawRectangleRounded(nameBadge, 0.35f, 6, new Color(188, 44, 28, 255));
+            // Double gold border
+            Raylib.DrawRectangleRoundedLinesEx(nameBadge, 0.35f, 6, 2.0f, new Color(235, 195, 65, 255));
+            // Corner golden tabs
+            Raylib.DrawCircleV(new Vector2(nameBadge.X + 4f, nameBadge.Y + 4f), 2.5f, new Color(255, 230, 110, 255));
+            Raylib.DrawCircleV(new Vector2(nameBadge.X + nameBadge.Width - 4f, nameBadge.Y + 4f), 2.5f, new Color(255, 230, 110, 255));
+
+            FontManager.Instance.DrawText(CurrentSpeaker, new Vector2(nameBadge.X + 16f, nameBadge.Y + 7f), 15f, new Color(255, 250, 238, 255));
         }
 
         // 5. Dialogue Typewriter Text
@@ -361,11 +387,34 @@ public sealed class DialogueBox
         }
     }
 
+    private static void DrawCornerFlourish(Vector2 corner, float dirX, float dirY)
+    {
+        Color gold = new(212, 175, 55, 230);
+        Color goldLight = new(240, 215, 120, 255);
+
+        // Filigree right-angle flourish lines
+        Raylib.DrawLineEx(corner, corner + new Vector2(dirX * 14f, 0f), 1.5f, gold);
+        Raylib.DrawLineEx(corner, corner + new Vector2(0f, dirY * 14f), 1.5f, gold);
+        Raylib.DrawLineEx(corner + new Vector2(dirX * 3f, dirY * 3f), corner + new Vector2(dirX * 10f, dirY * 3f), 1.0f, goldLight);
+        Raylib.DrawLineEx(corner + new Vector2(dirX * 3f, dirY * 3f), corner + new Vector2(dirX * 3f, dirY * 10f), 1.0f, goldLight);
+
+        // Accent gold pip
+        Raylib.DrawCircleV(corner + new Vector2(dirX * 5f, dirY * 5f), 1.8f, goldLight);
+    }
+
     private static void DrawAvatar(string avatarKey, Vector2 center, float radius)
     {
-        // Frame
-        Raylib.DrawCircleV(center, radius + 3f, HanoiPalette.CartoonOutline);
-        Raylib.DrawCircleV(center, radius, new Color(252, 245, 230, 255));
+        // Drop Shadow
+        Raylib.DrawCircleV(center + new Vector2(2f, 3f), radius + 4f, Raylib.ColorAlpha(Color.Black, 0.22f));
+
+        // Ornate Golden Locket Frame (#D4AF37)
+        Raylib.DrawCircleV(center, radius + 5f, new Color(212, 175, 55, 255));
+        Raylib.DrawCircleV(center, radius + 2f, new Color(130, 95, 40, 255));
+        Raylib.DrawCircleV(center, radius, new Color(252, 248, 236, 255));
+
+        // Top decorative golden crest
+        Raylib.DrawCircleV(new Vector2(center.X, center.Y - radius - 3f), 3.5f, new Color(245, 215, 95, 255));
+        Raylib.DrawCircleLines((int)center.X, (int)(center.Y - radius - 3f), 3.5f, new Color(150, 110, 45, 255));
 
         switch (avatarKey)
         {

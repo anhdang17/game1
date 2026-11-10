@@ -56,6 +56,53 @@ public static class HanoiPalette
     public static readonly Color ButChiEraserPink   = new(255, 138, 128, 255); // #FF8A80 Eraser
     public static readonly Color ButChiFerrule      = new(207, 216, 220, 255); // #CFD8DC Metal collar
 
+    // --- Bé Mây (Revamp) ---
+    public static readonly Color BeMayCloudWhite    = new(250, 252, 255, 255); // #FAFCFF Fluffy milk-white cloud
+    public static readonly Color BeMayCloudShadow   = new(212, 224, 248, 255); // #D4E0F8 Pastel periwinkle underside shadow
+    public static readonly Color BeMayCloudSwirl    = new(195, 210, 240, 255); // #C3D2F0 Subtle cloud body swirl
+    public static readonly Color BeMayHatCream      = new(250, 244, 232, 255); // #FAF4E8 Party hat cream/ivory
+    public static readonly Color BeMayHatYellow     = new(245, 222, 156, 255); // #F5DE9C Party hat pastel yellow band
+    public static readonly Color BeMayHatPink       = new(239, 167, 181, 255); // #EFA7B5 Party hat pastel pink band
+    public static readonly Color BeMayGourdBrown     = new(110, 68, 42, 255);   // #6E442A Leather gourd/pouch
+    public static readonly Color BeMayGourdHighlight = new(228, 178, 135, 255); // #E4B287 Leather gourd volume highlight
+    public static readonly Color BeMaySunlightGold  = new(255, 215, 64, 255);  // #FFD740 Golden sunlight crest
+    public static readonly Color BeMayLeatherBrown  = new(139, 84, 45, 255);   // #8B542D Leather diary satchel
+    public static readonly Color BeMayLeatherDark   = new(90, 56, 34, 255);    // #5A3822 Leather strap
+
+    // --- Quầy Phở ---
+    public static readonly Color PhoAwningGreen     = new(54, 106, 82, 255);   // #366A52 Green canopy stripe
+    public static readonly Color PhoAwningCream     = new(245, 238, 217, 255); // #F5EED9 Cream canopy stripe
+    public static readonly Color PhoWoodLight       = new(236, 203, 152, 255); // #ECCB98 Honey signboard wood
+    public static readonly Color PhoWoodMedium      = new(184, 115, 64, 255);  // #B87340 Countertop & timber
+    public static readonly Color PhoWoodDark        = new(110, 62, 30, 255);   // #6E3E1E Shadow wood & grooves
+    public static readonly Color PhoBannerCream     = new(248, 243, 226, 255); // #F8F3E2 Linen counter banner
+    public static readonly Color PhoLanternGold     = new(255, 202, 40, 255);  // #FFCA28 Glowing golden lantern
+    public static readonly Color PhoPotSilver       = new(218, 226, 234, 255); // #DAE2EA Polished stainless pot
+    public static readonly Color PhoBowlBlue        = new(43, 102, 184, 255);  // #2B66B8 Bat Trang porcelain blue
+
+    // --- Quầy Thịt Bò ---
+    public static readonly Color BeefRed            = new(195, 45, 55, 255);   // #C32D37 Fresh raw beef
+    public static readonly Color BeefFatWhite       = new(250, 240, 235, 255); // #FAF0EB Beef fat marbling
+    public static readonly Color ButcherBlue        = new(65, 115, 165, 255);  // #4173A5 Bác Tư shirt blue
+    public static readonly Color ButcherApronBrown  = new(125, 75, 45, 255);   // #7D4B2D Leather butcher apron
+    public static readonly Color ScaleGreen         = new(45, 135, 75, 255);   // #2D874B Nhơn Hòa spring scale green
+
+    // --- Gánh Rau Củ Quả (Cô Lan) ---
+    public static readonly Color VeggieWateringCanBlue = new(60, 125, 175, 255); // #3C7DAF Watering can
+    public static readonly Color VeggieCarrotOrange   = new(235, 110, 35, 255);  // #EB6E23 Carrot orange
+    public static readonly Color VeggieTomatoRed      = new(225, 50, 45, 255);   // #E1322D Tomato red
+    public static readonly Color VeggieEggplantPurple = new(110, 50, 120, 255);  // #6E3278 Eggplant purple
+    public static readonly Color VeggieCabbageGreen   = new(145, 195, 105, 255); // #91C369 Cabbage light green
+    public static readonly Color VeggieBananaYellow   = new(250, 215, 60, 255);  // #FAD73C Banana yellow
+    public static readonly Color VeggiePotatoBrown    = new(205, 165, 115, 255); // #CDA573 Potato & ginger
+    public static readonly Color VeggieChiliRed       = new(220, 35, 30, 255);   // #DC231E Hanging chili bunch
+
+    // --- Bóng Xám ---
+    public static readonly Color BongXamStormBody   = new(120, 115, 145, 255); // #787391 Dusky storm violet
+    public static readonly Color BongXamStormShadow = new(85, 80, 110, 255);   // #55506E Deep dusk shadow
+    public static readonly Color BongXamHighlight   = new(155, 150, 180, 255); // #9B96B4 Misty lavender highlight
+    public static readonly Color BongXamOutline     = new(55, 50, 72, 255);    // #373248 Storm cloud outline
+
     // --- Cartoon Outline & Shadows ---
     public static readonly Color CartoonOutline     = new(34, 34, 38, 255);    // #222226 Deep outline
     public static readonly Color DropShadow         = new(0, 0, 0, 55);        // 22% alpha shadow

@@ -1,141 +1,87 @@
-# Project: Du Ký Bé Mây (Vertical Slice)
+# Project: Du Ký Bé Mây Visual & Gameplay Revamp
 
 ## Architecture
-- **Paradigm**: Clean Architecture separating Pure C# Core Domain (`Source/Core/`) from Presentation (`Source/Graphics/`, `Source/UI/`, `Source/Audio/`, `Source/Stages/`).
-- **Platform**: .NET 10.0 (C# 13) + Raylib-cs 8.1.0 on macOS arm64 (Apple Silicon).
-- **Presentation Engine**: Raylib-cs for 2D vector shapes, rounded rectangles, TTF font rendering with Vietnamese UTF-8 glyphs, camera management, and procedural audio synthesis.
-- **Persistence**: Durable atomic JSON file persistence (`savegame.json`) with versioning and backup fallback.
-- **Headless Testability**: All game domain logic, quest progression, dialogue states, and puzzle mechanics run headlessly in `GameProject.Tests` (< 500 ms) via `xUnit` with zero display server dependency.
-
-## Code Layout
-```
-/Users/mac/Projects/game1/
-├── GameProject.csproj                    # Main application project (.NET 10, Raylib-cs 8.1.0)
-├── Program.cs                            # Application entry point & game loop
-├── Source/
-│   ├── Core/                            # PURE C# DOMAIN (Zero Raylib dependencies)
-│   │   ├── Models/                      # Player, Region, Quest, Inventory, Album models
-│   │   ├── State/                       # GameStateManager, RegionState, SaveData
-│   │   ├── Quests/                      # QuestManager, HanoiQuests (Q1, Q2, Q3)
-│   │   ├── Puzzles/                     # PhoCookingEngine, SpatialGridEngine (BFS)
-│   │   ├── Dialogue/                    # DialogueGraph, DialogueNode, Speaker
-│   │   ├── Hints/                       # HintManager, ButChiHintEngine
-│   │   ├── Persistence/                 # SaveLoadService, SaveGameJsonContext
-│   │   ├── Events/                      # EventBus, GameEvents
-│   │   └── Ports/                       # IInputService, IAudioService, ISaveStorage
-│   ├── Graphics/                        # Raylib presentation rendering
-│   │   ├── VectorRenderer.cs            # Rounded flat cartoon shape renderer
-│   │   ├── FontManager.cs               # Vietnamese UTF-8 TTF font loader
-│   │   └── ColorBloomEffect.cs          # Color restoration ripple effect
-│   ├── Audio/                           # Audio presentation & synthesis
-│   │   ├── AudioService.cs              # Raylib audio player implementation
-│   │   └── ProceduralSynth.cs           # Chimes, victory fanfare, footstep SFX
-│   ├── UI/                              # User Interface components
-│   │   ├── DialogueBox.cs               # Typewriter dialogue box & choices
-│   │   ├── QuestHUD.cs                  # Objective tracker & notifications
-│   │   ├── InventoryBar.cs              # Ingredient icons hotbar
-│   │   ├── AlbumViewer.cs               # Scrapbook UI (Pages, Stamps, Trivia)
-│   │   └── ButChiGuideUI.cs             # Companion portrait & hint bubble
-│   ├── Stages/                          # Scenes & stage controllers
-│   │   ├── SceneManager.cs              # Scene state manager
-│   │   ├── WorldMapScene.cs             # Vietnam 2D regional map
-│   │   ├── HanoiExplorationScene.cs     # Hanoi Old Quarter street exploration
-│   │   ├── PhoAssemblyScene.cs          # Quest 2 culinary mini-game
-│   │   └── StallPuzzleScene.cs          # Quest 3 Long Bien clearance puzzle
-│   ├── Data/                            # JSON content data
-│   │   ├── dialogues_hanoi.json         # Dialogue scripts for Hanoi characters
-│   │   ├── quests_hanoi.json            # Quest definitions and objectives
-│   │   └── trivia_hanoi.json            # Cultural cards & album content
-│   └── Utils/                           # Shared mathematical and helper utilities
-├── Tests/                               # Headless Automated Test Project
-│   ├── GameProject.Tests.csproj         # xUnit test project (.NET 10)
-│   ├── Mocks/                           # MockInputService, MockSaveStorage, NullAudio
-│   ├── QuestFlowTests.cs                # Hanoi Q1, Q2, Q3 progression tests
-│   ├── PhoPuzzleTests.cs                # Culinary assembly sequence validation
-│   ├── StallPuzzleTests.cs              # Spatial grid sliding & BFS clearance tests
-│   ├── DialogueTests.cs                 # JSON parsing & choice branching tests
-│   ├── HintTests.cs                     # On-demand & idle hint trigger tests
-│   ├── SaveLoadTests.cs                 # Persistence durability & corruption recovery
-│   └── Utf8EncodingTests.cs             # Vietnamese diacritic string integrity
-└── .agents/                             # Agent teamwork coordination state
-```
+- Presentation Layer: Pure Raylib procedural vector graphics (`VectorRenderer.cs`, `HanoiPalette.cs`, `ParticleEmitter.cs`). Zero external sprite/image dependencies.
+- Movement & Physics: `CharacterKinematics.cs` with smooth deceleration, Cloud Glide, and Dash activation via Space/Shift keys.
+- Exploration Stage: `HanoiExplorationScene.cs` with organic cobblestone pavement, moss, puddles, lanterns with warm radial glow, Long Bien bridge, and Bà An steaming pho stall (grid lines removed).
+- Minigames Stage: `PhoAssemblyScene.cs` (bouncy drop animation, broth steam, confetti celebration) and `StallPuzzleScene.cs` (smooth lerp sliding, golden BFS path ribbon). Core puzzle engines (`PhoCookingEngine.cs`, `SpatialGridEngine.cs`) are 100% decoupled and preserved.
+- World Progression: `WorldProgression.cs` & `WorldMapService.cs` with dual-contract architecture (retaining 4 legacy nodes for backward-compatible `GetRegionNodes()` and 7 Wonder nodes for `GetWorldWonderNodes()`). `WorldMapScene.cs` with vintage parchment sea chart diorama.
+- Storybook UI: `DialogueBox.cs` (handmade dó paper with gold trim), `QuestHUD.cs` & `InventoryBar.cs` (rustic bamboo & rattan styling).
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | 2D World Map Navigation | Regional map of Vietnam with selectable nodes (Hanoi, Huế) | M4 | ORIGINAL_REQUEST § R1 |
-| 2 | Region Color Restoration State | Visual reflection of color recovery (0% to 100%) | M4 | ORIGINAL_REQUEST § R1 |
-| 3 | Save Game to JSON | Serialize progression, inventory, quest flags, album to JSON | M1 | ORIGINAL_REQUEST § R1 |
-| 4 | Load Game from JSON | Deserialize saved state on startup with fallback resilience | M1 | ORIGINAL_REQUEST § R1 |
-| 5 | Bé Mây 2D Movement | Smooth 4-way character movement with inertia and collision | M2 | ORIGINAL_REQUEST § R2 |
-| 6 | Dynamic Y-Sorting | Renders sprites in proper visual depth order based on Y-axis | M2 | ORIGINAL_REQUEST § R2 |
-| 7 | Interaction Prompt Bubble | Floating `[E] Tương tác` prompt when near interactables | M2 | ORIGINAL_REQUEST § R2 |
-| 8 | Ingredient Gathering Loop | Collect 5 authentic phở ingredients from market merchants | M2 | ORIGINAL_REQUEST § R2 |
-| 9 | Inventory HUD Display | Upper screen inventory tracker showing collected ingredient icons | M2 | ORIGINAL_REQUEST § R2 |
-| 10 | Phở Assembly Mini-game UI | Modal interface with porcelain bowl, ingredient cards, slots | M3 | ORIGINAL_REQUEST § R2 |
-| 11 | Culinary Ordering Logic | Validates authentic 5-step layering order (Noodles->Beef->Herbs->Broth->Garnish) | M3 | ORIGINAL_REQUEST § R2 |
-| 12 | Phở Stall Color Bloom | First regional color wave restoring +33% vibrant color | M3 | ORIGINAL_REQUEST § R2 |
-| 13 | Street Stall Spatial Grid | 7x5 top-down grid puzzle with pushable carts and flower stalls | M3 | ORIGINAL_REQUEST § R2 |
-| 14 | Path Clearance Detection (BFS) | Real-time BFS flood fill checking path from street to Long Bien gate | M3 | ORIGINAL_REQUEST § R2 |
-| 15 | Puzzle Reset Function | Resets movable stalls to starting positions on `[R]` or hint | M3 | ORIGINAL_REQUEST § R2 |
-| 16 | Long Biên Full Color Wave | Restores 100% color to Hanoi level and Long Biên Bridge | M3 | ORIGINAL_REQUEST § R2 |
-| 17 | Bridge Gate Transition | Unlocks portal to finish level and transition to world map | M3 | ORIGINAL_REQUEST § R2 |
-| 18 | Memory Journal Page Award | Delivers illustrated Hanoi storybook page into album | M3 | ORIGINAL_REQUEST § R2 |
-| 19 | Lotus Stamp Award | Delivers "Tem Hoa Sen Hà Nội" into passport stamp collection | M3 | ORIGINAL_REQUEST § R2 |
-| 20 | Gray Shadow Letter & Cutscene | Narrative cutscene revealing Bóng Xám letter pointing to Huế | M3 | ORIGINAL_REQUEST § R2 |
-| 21 | Quest State Manager | Finite state machine tracking quest lifecycle and prerequisites | M1 | ORIGINAL_REQUEST § R3 |
-| 22 | Event Dispatching Bus | Decoupled observer event architecture for quests, items, and UI | M1 | ORIGINAL_REQUEST § R3 |
-| 23 | JSON Dialogue Graph Parser | Loads and parses dialogue trees from structured JSON files | M4 | ORIGINAL_REQUEST § R3 |
-| 24 | Typewriter Dialogue UI | Animated character dialogue box with avatar portraits and choices | M4 | ORIGINAL_REQUEST § R3 |
-| 25 | Bút Chì On-Demand Hints | Companion advice triggered via `[H]` based on quest state | M4 | ORIGINAL_REQUEST § R3 |
-| 26 | Idle Contextual Hints | Companion exclamation bubble if player is stalled > 45s | M4 | ORIGINAL_REQUEST § R3 |
-| 27 | Hanoi Street Collision Bounds | Static collision geometry preventing walking through walls/curbs | M2 | ORIGINAL_REQUEST § R2 |
-| 28 | Collection Album UI | 3-tab scrapbook for Journal Pages, Travel Stamps, Fact Cards | M4 | ORIGINAL_REQUEST § R4 |
-| 29 | Save Data Corruption Recovery | Atomic save with backup and auto-repair on corrupted JSON | M1 | ORIGINAL_REQUEST § R1 |
-| 30 | Headless Simulation Driver | Mock input and headless update loop for automated test runner | M1 | ORIGINAL_REQUEST § Acceptance |
+| 1 | Bé Mây Cloud Redesign | 5-puff fluffy magical cloud, rosy cheeks, golden crest, mini tilted nón lá, leather pouch, expressive sparkly eyes | M1 | ORIGINAL_REQUEST §R1 |
+| 2 | Bút Chì Companion Redesign | 3-facet hexagonal wooden body, wood grain, pink eraser, silver ferrule, eye tracking, cyan magic tip with star dust | M1 | ORIGINAL_REQUEST §R1 |
+| 3 | Bóng Xám Visual Helper | Dreamy slate-violet storm cloud with soulful expressive eyes and falling mist particles (`DrawBongXam`) | M1 | Plan §Component 2 |
+| 4 | Procedural Particle Emitter | Lightweight procedural particle system supporting CloudPuff, Steam, Sparkles, Confetti with headless test safety | M2 | ORIGINAL_REQUEST §R2 |
+| 5 | Cloud Glide & Dash Kinematics | Smooth deceleration, Space/Shift Dash mechanics with cloud puffs, preserving `GetVerticalBobbingOffset() == 0f` when idle | M2 | ORIGINAL_REQUEST §R3 |
+| 6 | Old Quarter Grid Line Removal | Remove Cartesian checkerboard grid lines in `HanoiExplorationScene.cs` (lines 708-715) | M3 | ORIGINAL_REQUEST §R2 |
+| 7 | Cobblestone Street & Environment Art | Procedural cobblestones, moss patches, rain puddles with sky reflections, fallen petals/leaves, weathered colonial walls, green shutters, warm red lanterns | M3 | ORIGINAL_REQUEST §R2 |
+| 8 | Bà An Steaming Pho Stall | Bà An NPC with silver hair chignon and ladle, porcelain bowls, and steaming broth pot with glowing coals | M3 | Plan §Component 3 |
+| 9 | Pho Assembly Minigame Polish | Bouncy ingredient drop animation, steam puffs on broth addition, confetti explosion celebration on recipe completion | M4 | ORIGINAL_REQUEST §R3 |
+| 10 | Stall Puzzle Lerp Sliding | Smooth visual lerp interpolation for sliding stalls/carts and glowing multi-layer golden BFS path ribbon | M4 | ORIGINAL_REQUEST §R3 |
+| 11 | 7 Wonders World Map Expansion | Support 7 World Wonders in `WorldProgression.cs` & `WorldMapService.cs` with dual-contract preserving 4 legacy nodes for test compatibility | M5 | ORIGINAL_REQUEST §R4 |
+| 12 | Storybook Parchment Sea Chart Map | 2D vintage parchment sea chart with continental flight arcs, wonder diorama emblems, and progress states in `WorldMapScene.cs` | M5 | ORIGINAL_REQUEST §R4 |
+| 13 | Handmade Dó Paper Dialogue Box | Dó paper texture, deckled edges, and double-line gold trim corner flourishes in `DialogueBox.cs` | M5 | ORIGINAL_REQUEST §R4 |
+| 14 | Rustic Bamboo QuestHUD & Inventory | Bamboo slat framing, joint notches, and woven rattan backgrounds in `QuestHUD.cs` and `InventoryBar.cs` | M5 | ORIGINAL_REQUEST §R4 |
+| 15 | Test Suite Preservation (567/567) | Complete test suite preservation under Release configuration (`dotnet test Tests/GameProject.Tests.csproj -c Release`) | M6 | ORIGINAL_REQUEST §R5 |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Core Domain Engine & Persistence | Models, GameStateManager, QuestEngine, SaveLoadService, EventBus, MockPorts | none | DONE |
-| M2 | Hanoi Exploration & Quest 1 | Hanoi street map, Bé Mây movement, Y-sorting, stalls, Q1 ingredient gathering | M1 | DONE |
-| M3 | Hanoi Quests 2 & 3 & Progression Climax | Q2 Phở assembly, Q3 spatial grid BFS, Long Biên gate unlock, Journal Page, Lotus Stamp, Gray Shadow letter | M1, M2 | DONE |
-| M4 | Dialogue, Hint, Album Systems & World Map | JSON Dialogue parser & UI, Bút Chì hint engine, Collection Album (3 tabs), 2D World Map | M1, M3 | DONE |
-| M5 | Final Integration & E2E Verification | Phase 1: Pass 100% E2E tests (Tiers 1-4); Phase 2: Adversarial coverage hardening (Tier 5); Production build packaging | M1, M2, M3, M4 | DONE |
+| M1 | Character Presentation Revamp | `VectorRenderer.cs`, `HanoiPalette.cs` | none | DONE |
+| M2 | Particle System & Kinematics Dash | `ParticleEmitter.cs`, `CharacterKinematics.cs`, Input ports | none | DONE |
+| M3 | Old Quarter Environment Art | `HanoiExplorationScene.cs` | M1, M2 | DONE |
+| M4 | Minigames Polish | `PhoAssemblyScene.cs`, `StallPuzzleScene.cs` | M2 | DONE |
+| M5 | 7 Wonders World Map & Storybook UI | `WorldProgression.cs`, `WorldMapService.cs`, `WorldMapScene.cs`, `DialogueBox.cs`, `QuestHUD.cs`, `InventoryBar.cs` | none | DONE |
+| M6 | Final Acceptance & Regression Verification | Full test execution (567/567 passed), adversarial coverage audit | M1, M2, M3, M4, M5 | DONE |
 
 ## Interface Contracts
+### `VectorRenderer` ↔ Caller Scenes
+- `DrawBeMay(Vector2 feetPos, FacingDirection facing, float animTime, bool isMoving, float scale = 1.0f, bool withShadow = true)`
+- `DrawButChi(Vector2 floatingPos, float animTime, float scale = 1.0f)`
+- `DrawBongXam(Vector2 centerPos, float animTime, float scale = 1.0f)`
+- `DrawBaAnPhoStall(Vector2 pos, string stallName, float animTime)`
 
-### M1 ↔ M2 (Core Domain ↔ Hanoi Exploration)
-- `GameStateManager`: Provides `CurrentState`, `ActiveRegion`, `PlayerProfile`.
-- `QuestManager`: Exposes `StartQuest("Quest_Hanoi_01")`, `RecordObjectiveProgress("Item_BanhPho")`, `IsQuestCompleted("Quest_Hanoi_01")`.
-- `Inventory`: Exposes `AddItem(string itemId)`, `HasItem(string itemId)`, `GetItems()`.
-- `EventBus`: Fires `OnItemCollected`, `OnQuestUpdated`.
+### `ParticleEmitter` ↔ Scenes
+- `EmitCloudPuff(Vector2 pos, int count = 3)`
+- `EmitSteam(Vector2 potPos, float dt)`
+- `EmitSparkles(Vector2 pos, Color color, int count = 5)`
+- `EmitConfetti(Vector2 center, int count = 30)`
+- `Update(float dt)`, `Draw()`, `UpdateAndDraw(float dt)`, `Clear()`, `ParticleCount`
+- Safe for headless tests: `if (!Raylib.IsWindowReady()) return;` inside `Draw()`.
 
-### M1/M2 ↔ M3 (Exploration ↔ Puzzles & Level Climax)
-- `IPhoPuzzleEngine`:
-  - `bool PlaceIngredient(int slotIndex, string ingredientId)`
-  - `bool ValidateAssembly(out string errorMessage)`
-  - `void ResetPuzzle()`
-  - Sequence requirement: `["Item_BanhPho", "Item_ThitBo", "Item_HanhLa", "Item_NuocDung", "Item_GiaVi"]`
-- `IStallGridEngine`:
-  - `void InitializeGrid(int width = 7, int height = 5)`
-  - `bool PushObject(string objectId, Direction dir)`
-  - `bool IsPathClear()` (evaluates BFS from `(0, 2)` to `(6, 2)`)
-  - `void ResetGrid()`
-- `LevelProgressionService`:
-  - `CompleteLevel1()`: marks Hanoi `ColorPercent = 100.0`, awards `JournalPage_Hanoi_01`, awards `Stamp_HoaSen_Hanoi`, unlocks `Hue` region, triggers `GrayShadow_Letter`.
+### `CharacterKinematics` ↔ Input & Scenes
+- `bool TryDash(Vector2 inputDirection)`
+- `bool IsDashing`, `float DashTimer`, `float DashCooldown`
+- `GetVerticalBobbingOffset()` returns strictly `0f` when `!IsMoving`.
+- `IInputService.IsDashJustPressed` bound to `LeftShift`, `RightShift`, `Space`.
 
-### M1/M3 ↔ M4 (Core & Progression ↔ Dialogue, Hints, Album, World Map)
-- `IDialogueService`:
-  - `void LoadDialogueFile(string path)`
-  - `DialogueNode StartDialogue(string dialogueId)`
-  - `DialogueNode SelectChoice(string choiceId)`
-- `IHintService`:
-  - `string GetCurrentHint(string activeQuestId, GameContext context)`
-- `IAlbumService`:
-  - `IReadOnlyList<JournalPage> GetJournalPages()`
-  - `IReadOnlyList<TravelStamp> GetTravelStamps()`
-  - `IReadOnlyList<FactCard> GetUnlockedFactCards()`
-- `IWorldMapService`:
-  - `IReadOnlyList<RegionNode> GetRegionNodes()`
-  - `bool TrySelectRegion(string regionId, out string failureReason)`
+### `WorldMapService` ↔ Tests & Scenes
+- `GetRegionNodes(WorldProgression progression)` returns exactly 4 legacy nodes (Hanoi, Hue, HoiAn, SaiGon) to satisfy `Tests/WorldMapTests.cs:18`.
+- `GetWorldWonderNodes(WorldProgression progression)` returns 7 World Wonders for `WorldMapScene.cs`.
+- `TrySelectRegion(string regionId, WorldProgression progression, out string failureReason)` resolves against both wonder and legacy nodes.
+
+## Code Layout
+- `Source/Graphics/HanoiPalette.cs` — Owned by M1
+- `Source/Graphics/VectorRenderer.cs` — Owned by M1
+- `Source/Graphics/ParticleEmitter.cs` — Owned by M2 (NEW)
+- `Source/Core/Movement/CharacterKinematics.cs` — Owned by M2
+- `Source/Core/Ports/IInputService.cs` — Owned by M2
+- `Source/Graphics/RaylibInputService.cs` — Owned by M2
+- `Source/Core/Ports/MockInputService.cs` — Owned by M2
+- `Source/Stages/HanoiExplorationScene.cs` — Owned by M3
+- `Source/Stages/PhoAssemblyScene.cs` — Owned by M4
+- `Source/Stages/StallPuzzleScene.cs` — Owned by M4
+- `Source/Core/Models/WorldProgression.cs` — Owned by M5
+- `Source/Core/WorldMap/WorldMapService.cs` — Owned by M5
+- `Source/Stages/WorldMapScene.cs` — Owned by M5
+- `Source/UI/DialogueBox.cs` — Owned by M5
+- `Source/UI/QuestHUD.cs` — Owned by M5
+- `Source/UI/InventoryBar.cs` — Owned by M5
+- Core Domain Engines (READ-ONLY, UNTOUCHED):
+  - `Source/Core/Puzzles/PhoCookingEngine.cs`
+  - `Source/Core/Puzzles/SpatialGridEngine.cs`
+  - `Source/Core/Models/SaveData.cs`
+  - `Source/Core/Quests/QuestManager.cs`

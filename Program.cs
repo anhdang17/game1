@@ -34,6 +34,37 @@ public static class Program
         );
         sceneManager.SwitchScene(explorationScene);
 
+        if (args.Length > 0 && args[0] == "--screenshot")
+        {
+            for (int f = 0; f < 5; f++)
+            {
+                sceneManager.Update(0.016f);
+                Raylib.BeginDrawing();
+                Raylib.ClearBackground(Color.Black);
+                sceneManager.Draw();
+                Raylib.EndDrawing();
+            }
+            Raylib.TakeScreenshot("hanoi_exploration_screenshot.png");
+
+            var puzzleScene = new StallPuzzleScene(saveData, explorationScene.QuestManager, eventBus, audioService, inputService);
+            sceneManager.SwitchScene(puzzleScene);
+            for (int f = 0; f < 5; f++)
+            {
+                sceneManager.Update(0.016f);
+                Raylib.BeginDrawing();
+                Raylib.ClearBackground(Color.Black);
+                sceneManager.Draw();
+                Raylib.EndDrawing();
+            }
+            Raylib.TakeScreenshot("stall_puzzle_screenshot.png");
+
+            sceneManager.Dispose();
+            FontManager.Instance.Dispose();
+            VectorRenderer.UnloadStallTextures();
+            if (Raylib.IsWindowReady()) Raylib.CloseWindow();
+            return;
+        }
+
         // 3. Main Game Loop (60 FPS)
         while (!Raylib.WindowShouldClose())
         {

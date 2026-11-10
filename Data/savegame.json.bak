@@ -1,0 +1,67 @@
+﻿{
+  "saveVersion": "1.0.0",
+  "lastSavedTimestamp": "2026-11-10T06:21:55.047272+00:00",
+  "playerProfile": {
+    "playerName": "Bé Mây",
+    "currentRegionId": "Hanoi",
+    "totalPlayTimeSeconds": 0
+  },
+  "worldProgression": {
+    "unlockedRegions": [
+      "Hanoi",
+      "Hue"
+    ],
+    "completedRegions": [
+      "Hanoi"
+    ],
+    "regionColorRestoration": {
+      "Hanoi": 100,
+      "Hue": 0
+    }
+  },
+  "level1State": {
+    "playerSpawnX": 120,
+    "playerSpawnY": 250,
+    "activeQuestId": "Quest_Hanoi_01",
+    "questFlags": {
+      "Q1_Started": true,
+      "Q1_BanhPho_Collected": true,
+      "Q1_ThitBo_Collected": true,
+      "Q1_NuocDung_Collected": true,
+      "Q1_HanhLa_Collected": true,
+      "Q1_ThaoMoc_Collected": true,
+      "Q1_Completed": true,
+      "Q2_Started": false,
+      "Q2_PhoAssembled": true,
+      "Q2_Completed": true,
+      "Q3_Started": false,
+      "Q3_GridSolved": false,
+      "Q3_Completed": true,
+      "Gate_LongBien_Unlocked": true,
+      "GrayShadow_LetterRead": true,
+      "Level1_Finished": true
+    },
+    "inventoryItems": [
+      "Item_BanhPho",
+      "Item_ThitBo",
+      "Item_NuocDung",
+      "Item_ThaoMoc",
+      "Item_HanhLa"
+    ],
+    "puzzle3ObjectPositions": []
+  },
+  "collectionAlbum": {
+    "collectedJournalPages": [
+      "JournalPage_Hanoi_01"
+    ],
+    "collectedStamps": [
+      "Stamp_HoaSen_Hanoi"
+    ],
+    "unlockedFactCards": []
+  },
+  "audioSettings": {
+    "masterVolume": 0.8,
+    "sfxVolume": 0.9,
+    "musicVolume": 0.7
+  }
+}

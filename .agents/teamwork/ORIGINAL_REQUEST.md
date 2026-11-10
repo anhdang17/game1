@@ -1,56 +1,44 @@
 # Original User Request
 
-## Initial Request — 2026-11-08T15:08:10Z
+## Initial Request — 2026-11-10T06:01:33Z
 
-Phát triển bản Vertical Slice hoàn chỉnh (chuẩn production) của game 2D "Du Ký Bé Mây" - thể loại khám phá thế giới thật và giải đố có cốt truyện, người chơi điều khiển Mây cùng Bút Chì thu thập các trang Cuốn Sổ Ký Ức để khôi phục màu sắc cho thế giới. Nhóm phát triển tự quyết định lựa chọn công nghệ phù hợp (Unity 2D C# hoặc .NET 10 / Raylib-cs).
+This is a single self-contained fix; keep it small and focused. Integrate authentic pixel art sprite assets for the 3 market stalls into the game so their in-game appearance matches the user's reference images exactly, replacing the low-fidelity procedural vector rendering.
 
 Working directory: /Users/mac/Projects/game1
 Integrity mode: development
 
 ## Requirements
 
-### R1. Bản đồ thế giới và hệ thống tiến trình
-- Bản đồ thế giới 2D cho phép xem và chọn địa danh đã mở khóa, hiển thị trạng thái hồi phục màu sắc của các vùng đất.
-- Hệ thống quản lý tiến trình (Save/Load) lưu trữ trạng thái các màn đã mở khóa, trang sổ và tem du lịch đã thu thập, khôi phục nguyên vẹn trạng thái khi mở lại game.
+### R1. Pixel Art Sprite Asset Generation
+Process and crop the 3 user-provided reference images into clean, transparent PNG texture sprite assets and place them in the project's asset directory (`Data/` or equivalent):
+- Quán Phở Bà An (`media_1794288642657_056fa298.jpg`): grandmother cooking broth, canopy, signboards, bowls, condiment trays, stool, A-frame chalkboard.
+- Quầy Thịt Bò Bác Tư (`media_1794289263118_647ac935.jpg`): butcher chopping beef on wooden block, hanging ribs and shanks, meat trays, Nhơn Hòa scale, A-frame menu.
+- Gánh Rau Củ Quả Cô Lan (`media_1794289672573_d8d071c7.jpg`): vegetable vendor waving, hanging garlic/shallot braids and chilies, tiered produce crates on counter and ground, watering can, A-frame menu.
 
-### R2. Không gian khám phá và nhiệm vụ Màn 1 (Hà Nội)
-- Không gian khám phá phong cách hoạt hình phẳng, nhiều màu, hình khối bo tròn tái hiện các bối cảnh Hà Nội (khu phố cổ, quán phở, cầu Long Biên, xe đạp, hoa sen).
-- Cơ chế điều khiển di chuyển nhân vật Mây mượt mà (WASD/phím mũi tên) và phím tương tác với NPC/vật thể.
-- Triển khai đầy đủ 3 nhiệm vụ theo tài liệu thiết kế:
-  1. Dẫn Mây thu thập đủ các nguyên liệu nấu phở trên các quầy hàng.
-  2. Ghép đúng bát phở hoàn chỉnh thông qua câu đố kéo thả nguyên liệu theo thứ tự.
-  3. Sắp xếp các gian hàng đường phố để mở lối đi ra cầu Long Biên.
-- Hoàn thành đủ 3 nhiệm vụ sẽ mở khóa cổng sang màn tiếp theo, nhận 1 trang sổ ký ức, 1 tem hoa sen, và kích hoạt đoạn thư/cảnh ngắn gợi mở cốt truyện của Bóng Xám.
+### R2. In-Game Rendering Integration
+Update the game rendering system (replacing the procedural vector drawings in `Source/Graphics/VectorRenderer.cs` for the stalls) to load and render the transparent PNG sprite textures via Raylib `DrawTexturePro` or equivalent:
+- Stalls render at their appropriate scale, position, and layer depth within all active gameplay scenes: `HanoiExplorationScene` (street exploration), `StallPuzzleScene` (stall sliding minigame), and related mini-games.
+- Maintain existing collision boxes, interaction trigger zones, and dialogue/puzzle interactions without breaking scene logic.
 
-### R3. Hệ thống hội thoại, quản lý nhiệm vụ và gợi ý (Dialogue, Quest & Hint Systems)
-- Quest Manager theo dõi tiến độ các nhiệm vụ trong màn và phát sự kiện mở cổng khi hoàn tất.
-- Dialogue System đọc kịch bản hội thoại từ dữ liệu cấu hình (JSON), thể hiện các đoạn hội thoại giữa Mây, Bút Chì và cư dân địa phương.
-- Cơ chế gợi ý: Bút Chì cung cấp gợi ý cho người chơi khi được kích hoạt hoặc khi người chơi gặp khó khăn.
+### R3. Non-Regression & Build Verification
+Ensure the solution builds cleanly in Release configuration and all existing automated tests pass without regressions (`dotnet test Tests/GameProject.Tests.csproj -c Release`).
 
-### R4. Hệ thống bộ sưu tập (Collection Album)
-- Giao diện Bộ sưu tập cho phép người chơi xem lại các trang sổ ký ức, tem du lịch đã đạt được và các thẻ thông tin văn hóa/sự thật thú vị về địa danh.
+## Verification Resources
+- Reference Image 1 (Quán Phở Bà An): /Users/mac/.gemini/antigravity/brain/097595dc-a0b9-4e11-89f6-3770124724f3/.user_uploaded/media_1794288642657_056fa298.jpg
+- Reference Image 2 (Quầy Thịt Bò Bác Tư): /Users/mac/.gemini/antigravity/brain/097595dc-a0b9-4e11-89f6-3770124724f3/.user_uploaded/media_1794289263118_647ac935.jpg
+- Reference Image 3 (Gánh Rau Củ Quả Cô Lan): /Users/mac/.gemini/antigravity/brain/097595dc-a0b9-4e11-89f6-3770124724f3/.user_uploaded/media_1794289672573_d8d071c7.jpg
+- Existing Unit Tests: Tests/GameProject.Tests.csproj
 
 ## Acceptance Criteria
 
-### Chức năng và Gameplay
-- [ ] Game biên dịch thành công và khởi chạy không có lỗi.
-- [ ] Bản đồ thế giới hiển thị các địa danh, phản ánh đúng trạng thái mở khóa và màu sắc các vùng.
-- [ ] Người chơi điều khiển Mây di chuyển và tương tác trơn tru trong màn 1 Hà Nội.
-- [ ] Cả 3 nhiệm vụ tại Hà Nội (nhặt nguyên liệu, xếp bát phở, sắp xếp gian hàng mở lối cầu Long Biên) đều giải được với logic chính xác và phản hồi trực quan rõ ràng.
-- [ ] Hoàn thành đủ 3 nhiệm vụ kích hoạt sự kiện mở cổng qua màn, cấp trang sổ, tem hoa sen và hiển thị thư của Bóng Xám.
-- [ ] Hệ thống hội thoại hiển thị đúng nội dung theo dữ liệu cấu hình; cơ chế gợi ý của Bút Chì hoạt động khi cần.
-- [ ] Giao diện Bộ sưu tập hiển thị đầy đủ và chính xác các trang sổ, tem và thẻ thông tin đã thu thập.
-- [ ] Dữ liệu tiến trình được lưu bền vững và tải lại chính xác qua các lần khởi động game.
-- [ ] Có bộ kiểm thử tự động (automated tests/verification scripts) kiểm tra được tính đúng đắn của logic nhiệm vụ, chuyển đổi trạng thái game và cơ chế Save/Load.
+### Visual Fidelity & Asset Integration
+- [ ] Processed transparent PNG sprite textures exist in the game assets directory for all 3 stalls: Quán Phở Bà An, Quầy Thịt Bò Bác Tư, and Gánh Rau Củ Quả Cô Lan.
+- [ ] The stalls in Hanoi exploration street scene and stall puzzle scene render using the sprite textures matching the reference images rather than primitive vector geometry.
+- [ ] Visual verification: In-game screenshots or frame captures of the 3 stalls confirm visual 1:1 fidelity with the reference pixel art.
 
-## Follow-up — 2026-11-09T01:42:00Z
+### Gameplay & Scene Integration
+- [ ] Player can interact with all 3 stalls in `HanoiExplorationScene` and `StallPuzzleScene` with proper interaction bounds and collision boxes intact.
+- [ ] Game runs without Raylib texture load failures or memory leaks during scene transitions.
 
-Người dùng vừa nhắn: "cho team chạy dự án chạy tiếp đi em". Xin cho biết tình hình tiến độ hiện tại và kế hoạch tiếp theo của nhóm.
-
-## Follow-up — 2026-11-09T05:45:13Z
-
-Người dùng vừa thông báo: "chạy tiếp đi mấy đứa, hồi quota rồi". Hãy tiếp tục điều phối hoàn thiện Milestone 4, giải quyết các test cases phản biện và tiến hành Milestone 5 nhé!
-
-## Follow-up — 2026-11-09T11:01:55Z
-
-Kết nối mạng vừa bị ngắt tạm thời. Vui lòng tiếp tục điều phối hoàn tất Final Gate Milestone 5 và tiến hành Victory Audit để hoàn tất dự án.
+### Non-Regression
+- [ ] `dotnet test Tests/GameProject.Tests.csproj -c Release` executes with all tests passing (0 failures, 0 errors).

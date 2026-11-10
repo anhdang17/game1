@@ -12,6 +12,8 @@ public sealed class RaylibInputService : IInputService
     public Vector2 MovementDirection { get; private set; } = Vector2.Zero;
 
     public bool IsInteractJustPressed { get; private set; }
+    public bool IsDashJustPressed { get; private set; }
+    public bool IsDashPressed() => IsDashJustPressed;
     public bool IsHintJustPressed { get; private set; }
     public bool IsResetJustPressed { get; private set; }
     public bool IsAlbumJustPressed { get; private set; }
@@ -41,7 +43,10 @@ public sealed class RaylibInputService : IInputService
         MovementDirection = raw == Vector2.Zero ? Vector2.Zero : Vector2.Normalize(raw);
 
         // 2. Action keys
-        IsInteractJustPressed = Raylib.IsKeyPressed(KeyboardKey.E) || Raylib.IsKeyPressed(KeyboardKey.Space);
+        IsInteractJustPressed = Raylib.IsKeyPressed(KeyboardKey.E);
+        IsDashJustPressed = Raylib.IsKeyPressed(KeyboardKey.LeftShift) ||
+                            Raylib.IsKeyPressed(KeyboardKey.RightShift) ||
+                            (Raylib.IsKeyPressed(KeyboardKey.Space) && !IsInteractJustPressed);
         IsHintJustPressed = Raylib.IsKeyPressed(KeyboardKey.H);
         IsResetJustPressed = Raylib.IsKeyPressed(KeyboardKey.R);
         IsAlbumJustPressed = Raylib.IsKeyPressed(KeyboardKey.J);

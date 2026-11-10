@@ -42,6 +42,8 @@ public sealed class PhoAssemblyScene : IScene
     private float _totalTime;
     private float _shakeTimer;
     private float _bloomProgress;
+    private readonly float[] _slotDropTimers = new float[5];
+    private readonly ParticleEmitter _particles = new();
 
     // Navigation state
     public bool IsSolved => _solved;
@@ -99,6 +101,8 @@ public sealed class PhoAssemblyScene : IScene
         _feedbackTimer = 5f;
         RequestExit = false;
         RequestNextScene = false;
+        Array.Clear(_slotDropTimers, 0, _slotDropTimers.Length);
+        _particles.Clear();
     }
 
     public void Update(float dt)
@@ -107,6 +111,21 @@ public sealed class PhoAssemblyScene : IScene
 
         if (_feedbackTimer > 0f) _feedbackTimer -= dt;
         if (_shakeTimer > 0f) _shakeTimer -= dt;
+
+        for (int i = 0; i < _slotDropTimers.Length; i++)
+        {
+            if (_slotDropTimers[i] > 0f)
+            {
+                _slotDropTimers[i] = MathF.Max(0f, _slotDropTimers[i] - dt * 3.5f);
+            }
+        }
+
+        if (_engine.CurrentSlots.Contains(ItemIds.NuocDung))
+        {
+            _particles.EmitSteam(new Vector2(BowlCenterX, BowlCenterY - 10f), dt);
+        }
+
+        _particles.Update(dt);
 
         if (_solved)
         {
@@ -142,6 +161,8 @@ public sealed class PhoAssemblyScene : IScene
     {
         _engine.ResetPuzzle();
         _selectedIngredientIndex = -1;
+        Array.Clear(_slotDropTimers, 0, _slotDropTimers.Length);
+        _particles.Clear();
         _feedbackMessage = "Bắt đầu lại từ đầu nhé! Nhớ: bánh phở trước tiên.";
         _feedbackTimer = 3f;
         _eventBus.Publish(new PhoPuzzleResetEvent());
@@ -259,6 +280,14 @@ public sealed class PhoAssemblyScene : IScene
         _engine.PlaceIngredient(slotIndex, ingredientId);
         _selectedIngredientIndex = -1;
 
+        if (slotIndex >= 0 && slotIndex < _slotDropTimers.Length)
+        {
+            _slotDropTimers[slotIndex] = 1.0f;
+        }
+
+        Vector2 dropPos = GetSlotPosition(slotIndex);
+        _particles.EmitSparkles(dropPos, HanoiPalette.WallYellowLight, 8);
+
         bool correct = IsCorrectSoFar(slotIndex, ingredientId);
         _eventBus.Publish(new PhoIngredientPlacedEvent(slotIndex, ingredientId, correct));
         _audioService?.PlaySfx(SfxType.ButtonClick);
@@ -286,6 +315,12 @@ public sealed class PhoAssemblyScene : IScene
             _progression.OnQuest2Completed();
             _eventBus.Publish(new PhoAssemblyCompletedEvent());
             _feedbackMessage = null;
+
+            Vector2 bowlCenter = new(BowlCenterX, BowlCenterY);
+            _particles.EmitConfetti(bowlCenter, 60);
+            _particles.EmitSparkles(bowlCenter, HanoiPalette.LotusPink, 15);
+            _particles.EmitSparkles(bowlCenter, HanoiPalette.WallYellow, 15);
+            _particles.EmitSparkles(bowlCenter, new Color(80, 200, 120, 255), 15);
 
             _audioService?.PlaySfx(SfxType.PhoCookSuccess);
             _audioService?.PlaySfx(SfxType.ColorBloomWave);
@@ -355,6 +390,26 @@ public sealed class PhoAssemblyScene : IScene
         DrawFeedback();
 
         if (_solved) DrawSolveOverlay();
+
+        _particles.Draw();
+    }
+
+    private float GetBounceY(int s)
+    {
+        if (s < 0 || s >= _slotDropTimers.Length) return 0f;
+        return -MathF.Sin((1f - _slotDropTimers[s]) * MathF.PI) * _slotDropTimers[s] * 20f;
+    }
+
+    private static int FindIngredientSlot(IReadOnlyList<string?> slots, params string[] targetIds)
+    {
+        for (int i = 0; i < slots.Count; i++)
+        {
+            for (int t = 0; t < targetIds.Length; t++)
+            {
+                if (slots[i] == targetIds[t]) return i;
+            }
+        }
+        return -1;
     }
 
     private void DrawTitle()
@@ -401,21 +456,33 @@ public sealed class PhoAssemblyScene : IScene
         bool hasBroth = slots.Contains(ItemIds.NuocDung);
         bool hasSpices = slots.Contains(ItemIds.ThaoMoc) || slots.Contains(ItemIds.GiaVi);
 
+        int noodleSlot = FindIngredientSlot(slots, ItemIds.BanhPho);
+        int meatSlot = FindIngredientSlot(slots, ItemIds.ThitBo);
+        int herbSlot = FindIngredientSlot(slots, ItemIds.HanhLa);
+        int brothSlot = FindIngredientSlot(slots, ItemIds.NuocDung);
+        int spiceSlot = FindIngredientSlot(slots, ItemIds.ThaoMoc, ItemIds.GiaVi);
+
+        float noodleBounceY = noodleSlot >= 0 ? GetBounceY(noodleSlot) : 0f;
+        float meatBounceY = meatSlot >= 0 ? GetBounceY(meatSlot) : 0f;
+        float herbBounceY = herbSlot >= 0 ? GetBounceY(herbSlot) : 0f;
+        float brothBounceY = brothSlot >= 0 ? GetBounceY(brothSlot) : 0f;
+        float spiceBounceY = spiceSlot >= 0 ? GetBounceY(spiceSlot) : 0f;
+
         if (hasNoodles)
         {
             // Ivory noodle ribbon folds at bowl bottom
             Color noodleColor = new(255, 250, 235, 255);
-            Raylib.DrawEllipse((int)center.X, (int)center.Y + 14, radiusX - 44, radiusY * 0.45f, noodleColor);
-            Raylib.DrawEllipseLines((int)center.X, (int)center.Y + 14, radiusX - 44, radiusY * 0.45f, new Color(220, 205, 175, 255));
+            Raylib.DrawEllipse((int)center.X, (int)(center.Y + 14 + noodleBounceY), radiusX - 44, radiusY * 0.45f, noodleColor);
+            Raylib.DrawEllipseLines((int)center.X, (int)(center.Y + 14 + noodleBounceY), radiusX - 44, radiusY * 0.45f, new Color(220, 205, 175, 255));
         }
 
         if (hasMeat)
         {
             // Thin marbled beef slices
             Color beefColor = new(190, 75, 75, 255);
-            Raylib.DrawEllipse((int)center.X - 20, (int)center.Y + 6, 24, 14, beefColor);
-            Raylib.DrawEllipse((int)center.X + 22, (int)center.Y + 8, 26, 15, beefColor);
-            Raylib.DrawEllipse((int)center.X, (int)center.Y - 2, 22, 13, beefColor);
+            Raylib.DrawEllipse((int)center.X - 20, (int)(center.Y + 6 + meatBounceY), 24, 14, beefColor);
+            Raylib.DrawEllipse((int)center.X + 22, (int)(center.Y + 8 + meatBounceY), 26, 15, beefColor);
+            Raylib.DrawEllipse((int)center.X, (int)(center.Y - 2 + meatBounceY), 22, 13, beefColor);
         }
 
         if (hasHerbs)
@@ -425,7 +492,7 @@ public sealed class PhoAssemblyScene : IScene
             for (int i = 0; i < 8; i++)
             {
                 float a = i * (MathF.PI * 2f / 8f) + animTime * 0.2f;
-                Vector2 sp = center + new Vector2(MathF.Cos(a) * 36f, MathF.Sin(a) * 22f + 4f);
+                Vector2 sp = center + new Vector2(MathF.Cos(a) * 36f, MathF.Sin(a) * 22f + 4f + herbBounceY);
                 Raylib.DrawCircleV(sp, 3.5f, scallionGreen);
             }
         }
@@ -433,14 +500,14 @@ public sealed class PhoAssemblyScene : IScene
         if (hasBroth)
         {
             // Translucent golden broth glaze covering interior + rising steam curls
-            Raylib.DrawEllipse((int)center.X, (int)center.Y + 6, radiusX - 24, radiusY - 18,
+            Raylib.DrawEllipse((int)center.X, (int)(center.Y + 6 + brothBounceY), radiusX - 24, radiusY - 18,
                 Raylib.ColorAlpha(new Color(214, 158, 46, 255), 0.40f));
 
             // Rising steam curls
             for (int s = 0; s < 3; s++)
             {
                 float sx = center.X - 30f + s * 30f + MathF.Sin(animTime * 3f + s) * 6f;
-                float sy = center.Y - 10f - MathF.Abs(MathF.Sin(animTime * 2f + s)) * 25f;
+                float sy = center.Y - 10f + brothBounceY - MathF.Abs(MathF.Sin(animTime * 2f + s)) * 25f;
                 Raylib.DrawCircleV(new Vector2(sx, sy), 4f + s, Raylib.ColorAlpha(Color.White, 0.25f));
             }
         }
@@ -449,8 +516,8 @@ public sealed class PhoAssemblyScene : IScene
         {
             // Star anise flower garnish at center
             Color starAniseBrown = new(115, 60, 30, 255);
-            Raylib.DrawPoly(center + new Vector2(0, -6), 8, 12f, 0f, starAniseBrown);
-            Raylib.DrawCircleV(center + new Vector2(0, -6), 3.5f, new Color(200, 160, 100, 255));
+            Raylib.DrawPoly(center + new Vector2(0, -6 + spiceBounceY), 8, 12f, 0f, starAniseBrown);
+            Raylib.DrawCircleV(center + new Vector2(0, -6 + spiceBounceY), 3.5f, new Color(200, 160, 100, 255));
         }
     }
 
@@ -459,6 +526,7 @@ public sealed class PhoAssemblyScene : IScene
         for (int i = 0; i < 5; i++)
         {
             Vector2 pos = GetSlotPosition(i);
+            pos.Y += GetBounceY(i);
             bool isHovered = _hoveredSlot == i;
             string? placedId = i < _engine.CurrentSlots.Count ? _engine.CurrentSlots[i] : null;
             bool hasFill = placedId != null;

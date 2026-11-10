@@ -1,85 +1,32 @@
-# Sentinel Handoff Report — Du Ký Bé Mây 2D Vertical Slice
+# Sentinel Handoff Report — Du Ký Bé Mây Visual & Gameplay Revamp
 
-**Agent**: Sentinel (`sentinel`)
-**Role**: Project Sentinel
-**Working Directory**: `/Users/mac/Projects/game1`
-**State Folder**: `/Users/mac/Projects/game1/.agents/teamwork/sentinel/`
-**Timestamp**: 2026-11-09T11:28:00Z
-**Audit Verdict**: **VICTORY CONFIRMED**
+## Observation
+The user requested the execution of the approved Visual and Gameplay Revamp Plan for *Du Ký Bé Mây* covering 5 core requirement areas:
+1. Character Presentation Revamp (Bé Mây & Bút Chì procedural vector redesign).
+2. Old Quarter Street Art overhaul (cobblestones, moss, puddles, lanterns; removing grid lines) & procedural particle system (`ParticleEmitter.cs`).
+3. Gameplay feel & Minigame polish (Cloud Glide, Dash, bouncy pho assembly, lerp puzzle sliding).
+4. 7 Wonders World Map expansion (`WorldProgression.cs`, `WorldMapService.cs`, `WorldMapScene.cs`) with backward compatibility, and Storybook UI (`DialogueBox.cs`, `QuestHUD.cs`, `InventoryBar.cs`).
+5. Non-regression of the full test suite (567/567 unit tests passing under Release configuration).
 
----
+## Logic Chain
+1. **Interview & Routing**: Conducted task interview via `teamwork_interviewer` and routed approved prompt to `teamwork_orchestrator` on the General path.
+2. **Orchestration & Decomposition**: Orchestrator surveyed codebase via 3 parallel explorers and decomposed work into 6 milestones (M1–M6) documented in `PROJECT.md`.
+3. **Implementation Track**: Dispatched dedicated workers across character rendering, particles/kinematics, environment art, minigames, and world map/UI.
+4. **Internal Quality Gate**: Reviewers and challengers evaluated visual fidelity, gameplay feel, and test preservation with an internal gate verdict of PASS.
+5. **Independent Victory Audit**: Spawned `teamwork_victory_auditor` (`e25ae5cc-05ad-4997-943b-2ecac09c025e`) with isolated context. The auditor executed:
+   - Phase A (Timeline & Commit Audit): PASS
+   - Phase B (Anti-Cheating & Integrity Audit): PASS (zero hardcoding, zero facade stubs, pure Raylib procedural rendering, zero external raster textures)
+   - Phase C (Independent Test Execution): PASS (`dotnet test Tests/GameProject.Tests.csproj -c Release` returned 567 passed, 0 failed, 0 skipped)
+6. **Verdict**: VICTORY CONFIRMED.
 
-## 1. Observation
+## Caveats
+- Raylib procedural vector graphics require `Raylib.IsWindowReady()` guards for headless test execution, which are implemented across all new and updated renderer methods.
+- The 7 wonders expansion maintains a dual-contract pattern: `GetRegionNodes()` preserves 4 legacy nodes for test backward compatibility, while `GetWorldWonderNodes()` exposes all 7 world wonders.
 
-1. **User Request & Requirements**:
-   - The original user request demanded a production-grade 2D Vertical Slice for the story-driven puzzle exploration game "Du Ký Bé Mây" (.NET 10.0 + Raylib-cs on macOS arm64).
-   - Core specifications:
-     - **R1**: 2D World Map (color restoration & region unlocking) and Atomic JSON Save/Load persistence with backup rotation.
-     - **R2**: Hanoi Stage 1 exploration diorama, Bé Mây movement kinematics & collisions, 3 complete quests (Gather 5 phở ingredients, Drag-and-drop phở assembly, 7x5 discrete sliding stall puzzle opening Long Biên bridge) leading to Journal Page 1, Lotus Stamp, and Bóng Xám typewriter letter cutscene.
-     - **R3**: Quest Manager FSM, JSON Dialogue System (`dialogues_hanoi.json`), and Bút Chì Hint Engine.
-     - **R4**: Collection Album (3 tabs: Journal Pages, Travel Stamps, Cultural Trivia Cards).
-     - Automated headless testability across 100% of domain and interaction logic.
+## Conclusion
+The revamp plan has been completely implemented, verified, and audited. The vertical slice is production-ready.
 
-2. **Milestone Progression & Gate Audits**:
-   - **Milestone 1 (Core Domain Engine & Persistence)**: Passed Gate It2 (192 tests pass, Reviewers APPROVE, Challengers APPROVE, Forensic Auditor CLEAN).
-   - **Milestone 2 (Hanoi Exploration & Quest 1)**: Passed Gate It2 (303 tests pass, Reviewers APPROVE, Challengers APPROVE, Forensic Auditor CLEAN).
-   - **Milestone 3 (Quests 2 & 3 & Progression Climax)**: Passed Gate It2 (410 tests pass, Reviewers APPROVE, Challengers APPROVE, Forensic Auditor CLEAN).
-   - **Milestone 4 (Dialogue, Hints, Album, World Map)**: Passed Gate It2 (520 tests pass, Reviewers APPROVE, Challengers APPROVE, Forensic Auditor CLEAN).
-   - **Milestone 5 (Final Integration, E2E & Packaging)**: Passed Gate It2 (567 tests pass in Release mode, Reviewers APPROVE, Challengers APPROVE, Forensic Auditor CLEAN).
-
-3. **Independent Victory Audit**:
-   - Spawned `teamwork_victory_auditor` (`0056114b-e8a8-453e-a834-00bfd4e0f25d`) with BLOCKING state against `.agents/teamwork/ORIGINAL_REQUEST.md`.
-   - **Verdict**: **VICTORY CONFIRMED**
-   - Independent test execution verified:
-     - `dotnet test Tests/GameProject.Tests.csproj -c Release`: 567 passed, 0 failed, 0 skipped in 10s.
-     - `dotnet test Tests/GameProject.Tests.csproj -c Debug`: 567 passed, 0 failed, 0 skipped in 10s.
-     - Zero warnings, zero errors on both configurations.
-     - Clean Architecture: 0 Raylib/UI dependencies in `Source/Core/`.
-     - Zero tautological assertions, zero skipped tests, zero facade/stub methods.
-     - Production binary `/Users/mac/Projects/game1/bin/Release/net10.0/osx-arm64/publish/GameProject`: Mach-O 64-bit arm64 single-file executable (80,360,812 bytes), launched successfully at 60 FPS as PID 36476.
-
----
-
-## 2. Logic Chain
-
-1. **Strict Protocol Compliance**:
-   - Never wrote code directly; remained ultra-light sentinel supervisor.
-   - Maintained `ORIGINAL_REQUEST.md` verbatim through all user follow-ups.
-   - Maintained regular progress monitoring and liveness tracking crons.
-   - Responded immediately to rate-limit quotas and connection resets by reviving the orchestrator with intact state.
-   - Refused to accept the orchestrator's Victory Claim at face value; spawned an independent post-victory auditor with zero shared context from the implementation swarm.
-   - Withheld completion reporting until receiving the explicit `VICTORY CONFIRMED` verdict.
-   - Executed clean termination of all crons and subagents prior to delivering the final report.
-
----
-
-## 3. Caveats
-
-1. **Platform Target**:
-   - The standalone production binary at `bin/Release/net10.0/osx-arm64/publish/GameProject` is compiled specifically for macOS Apple Silicon (arm64). To run on x86_64 macOS, Windows, or Linux, run `dotnet publish -r <runtime_identifier>`.
-2. **Audio Hardware in Headless CI**:
-   - `NullAudioService` is automatically selected in headless test runners where `Raylib.IsWindowReady()` is false, eliminating miniaudio initialization crashes. When running the GUI binary, `RaylibAudioService` initializes automatically.
-
----
-
-## 4. Conclusion
-
-The Vertical Slice for "Du Ký Bé Mây" is 100% complete, fully verified, production-grade, and exceeds all acceptance criteria in `ORIGINAL_REQUEST.md`. All automated test suites (567 tests) pass deterministically, and the single-file binary is ready for distribution.
-
----
-
-## 5. Verification Method
-
-To independently reproduce and verify the deliverables:
-
-```bash
-# 1. Run all 567 automated tests in Release configuration:
-dotnet test Tests/GameProject.Tests.csproj -c Release
-
-# 2. Inspect the standalone production binary:
-file bin/Release/net10.0/osx-arm64/publish/GameProject
-ls -lh bin/Release/net10.0/osx-arm64/publish/GameProject
-
-# 3. Launch the game executable:
-./bin/Release/net10.0/osx-arm64/publish/GameProject
-```
+## Verification Method
+- Independent audit test execution:
+  `dotnet test Tests/GameProject.Tests.csproj -c Release`
+  Result: 567/567 passed, 0 failed, 0 skipped (Duration: ~10s).

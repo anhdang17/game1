@@ -10,6 +10,7 @@ public class MockInputService : IInputService
     public Vector2 MovementDirection { get; set; } = Vector2.Zero;
 
     public bool IsInteractJustPressed { get; set; }
+    public bool IsDashJustPressed { get; set; }
     public bool IsHintJustPressed { get; set; }
     public bool IsResetJustPressed { get; set; }
     public bool IsAlbumJustPressed { get; set; }
@@ -18,6 +19,7 @@ public class MockInputService : IInputService
     public bool IsCancelJustPressed { get; set; }
 
     public bool IsInteractPressed() => IsInteractJustPressed;
+    public bool IsDashPressed() => IsDashJustPressed;
     public bool IsHintPressed() => IsHintJustPressed;
     public bool IsResetPressed() => IsResetJustPressed;
     public bool IsAlbumPressed() => IsAlbumJustPressed;
@@ -60,6 +62,7 @@ public class MockInputService : IInputService
     }
 
     public void PulseInteract() => IsInteractJustPressed = true;
+    public void PulseDash() => IsDashJustPressed = true;
     public void PulseHint() => IsHintJustPressed = true;
     public void PulseReset() => IsResetJustPressed = true;
     public void PulseAlbum() => IsAlbumJustPressed = true;
@@ -84,6 +87,7 @@ public class MockInputService : IInputService
     public void ResetPulses()
     {
         IsInteractJustPressed = false;
+        IsDashJustPressed = false;
         IsHintJustPressed = false;
         IsResetJustPressed = false;
         IsAlbumJustPressed = false;

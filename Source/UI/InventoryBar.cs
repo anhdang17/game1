@@ -99,12 +99,29 @@ public sealed class InventoryBar
 
     public void Draw()
     {
-        if (Bounds.Width <= 0f) return;
+        if (Bounds.Width <= 0f || !Raylib.IsWindowReady()) return;
 
-        // Container Shadow & Body
+        // Container Drop Shadow
         VectorRenderer.DrawDropShadow(Bounds, 0.35f, offsetY: 3f, alpha: 0.28f);
-        Raylib.DrawRectangleRounded(Bounds, 0.35f, 8, new Color(24, 28, 36, 225));
-        Raylib.DrawRectangleRoundedLinesEx(Bounds, 0.35f, 8, 1.5f, new Color(180, 160, 130, 200));
+
+        // Handcrafted Bamboo Tray Base (#C29B38)
+        Raylib.DrawRectangleRounded(Bounds, 0.3f, 8, new Color(194, 155, 56, 255));
+
+        // Horizontal bamboo slat grain
+        for (float y = Bounds.Y + 6f; y < Bounds.Y + Bounds.Height - 4f; y += 8f)
+        {
+            Raylib.DrawLineEx(new Vector2(Bounds.X + 10f, y), new Vector2(Bounds.X + Bounds.Width - 10f, y), 1.0f, new Color(165, 128, 42, 90));
+        }
+
+        // Bamboo Tray Outer Frame
+        Raylib.DrawRectangleRoundedLinesEx(Bounds, 0.3f, 8, 2.2f, new Color(130, 95, 30, 255));
+        Raylib.DrawRectangleRoundedLinesEx(new Rectangle(Bounds.X + 2f, Bounds.Y + 2f, Bounds.Width - 4f, Bounds.Height - 4f), 0.28f, 8, 1.0f, new Color(230, 195, 95, 180));
+
+        // Dark Rattan Bindings at 4 Corners (#4B321E)
+        DrawRattanCorner(new Vector2(Bounds.X + 8f, Bounds.Y + 8f));
+        DrawRattanCorner(new Vector2(Bounds.X + Bounds.Width - 8f, Bounds.Y + 8f));
+        DrawRattanCorner(new Vector2(Bounds.X + 8f, Bounds.Y + Bounds.Height - 8f));
+        DrawRattanCorner(new Vector2(Bounds.X + Bounds.Width - 8f, Bounds.Y + Bounds.Height - 8f));
 
         // Draw 5 slots
         for (int i = 0; i < _slots.Count; i++)
@@ -131,9 +148,9 @@ public sealed class InventoryBar
 
             if (slot.IsCollected)
             {
-                // Collected: Ivory background, golden rim
-                Raylib.DrawRectangleRounded(r, 0.3f, 6, new Color(254, 250, 240, 255));
-                Raylib.DrawRectangleRoundedLinesEx(r, 0.3f, 6, 2.0f, HanoiPalette.WallYellow);
+                // Collected: Warm ivory porcelain cushion, caramel-gold rim
+                Raylib.DrawRectangleRounded(r, 0.3f, 6, new Color(254, 252, 244, 255));
+                Raylib.DrawRectangleRoundedLinesEx(r, 0.3f, 6, 2.0f, new Color(214, 165, 45, 255));
 
                 // Draw procedural icon
                 DrawIngredientVectorIcon(slot.ItemId, r, isCollected: true);
@@ -144,9 +161,9 @@ public sealed class InventoryBar
             }
             else
             {
-                // Uncollected: Dark cavity, subtle dashed border
-                Raylib.DrawRectangleRounded(r, 0.3f, 6, new Color(36, 42, 52, 160));
-                Raylib.DrawRectangleRoundedLinesEx(r, 0.3f, 6, 1.0f, new Color(80, 90, 105, 140));
+                // Uncollected: Dark bamboo cavity, subtle rattan border
+                Raylib.DrawRectangleRounded(r, 0.3f, 6, new Color(85, 68, 48, 190));
+                Raylib.DrawRectangleRoundedLinesEx(r, 0.3f, 6, 1.0f, new Color(125, 98, 65, 170));
 
                 // Draw muted silhouette
                 DrawIngredientVectorIcon(slot.ItemId, r, isCollected: false);
@@ -253,6 +270,17 @@ public sealed class InventoryBar
                 Raylib.DrawCircleV(center, 3f, seedDot);
                 break;
         }
+    }
+
+    private static void DrawRattanCorner(Vector2 pos)
+    {
+        Color rattanDark = new(75, 50, 30, 240);
+        Color rattanLight = new(135, 95, 55, 220);
+
+        // Criss-cross rattan bindings
+        Raylib.DrawLineEx(new Vector2(pos.X - 4f, pos.Y - 4f), new Vector2(pos.X + 4f, pos.Y + 4f), 1.5f, rattanDark);
+        Raylib.DrawLineEx(new Vector2(pos.X + 4f, pos.Y - 4f), new Vector2(pos.X - 4f, pos.Y + 4f), 1.5f, rattanDark);
+        Raylib.DrawCircleV(pos, 1.5f, rattanLight);
     }
 }
 

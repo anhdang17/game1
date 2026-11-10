@@ -19,7 +19,7 @@ public class StallPuzzleTests
     [Fact]
     public void FlowerCart_CanOnlyMoveVertically()
     {
-        var grid = new SpatialGridEngine();
+        var grid = new SpatialGridEngine(); 
 
         // Xe Hoa is at x=2, y=1 (size 1x2, occupies y=1 and y=2)
         // Horizontal push must fail
@@ -234,5 +234,21 @@ public class StallPuzzleTests
         Assert.True(scene.IsSolved);
         Assert.Equal(2, scene.MoveCount);
         Assert.True(saveData.Level1State.QuestFlags.Gate_LongBien_Unlocked);
+    }
+
+    [Fact]
+    public void StallPuzzleScene_InputCancel_SetsRequestExit()
+    {
+        var eventBus = new GameProject.Core.Events.EventBus();
+        var saveData = GameProject.Core.Models.SaveData.CreateDefault();
+        var questManager = new GameProject.Core.Quests.QuestManager(eventBus);
+        var mockInput = new GameProject.Tests.Mocks.MockInputService { CancelPressed = true };
+
+        var scene = new GameProject.Stages.StallPuzzleScene(saveData, questManager, eventBus, inputService: mockInput);
+        scene.Enter();
+        Assert.False(scene.RequestExit);
+
+        scene.Update(0.016f);
+        Assert.True(scene.RequestExit);
     }
 }

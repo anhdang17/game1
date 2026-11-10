@@ -68,8 +68,50 @@ public sealed class HanoiExplorationScene : IScene
     public Vector2 TablePos1 { get; } = new(280f, 360f);
     public Vector2 TablePos2 { get; } = new(520f, 350f);
 
+    // Particle system & timing
+    private readonly ParticleEmitter _particles = new();
+    public ParticleEmitter Particles => _particles;
+    private float _puffTimer;
+    private float _sparkleTimer;
+
+    // Deterministic environmental layout data
+    private static readonly (float X, float Y, float Rx, float Ry, int Shade)[] MossPatches =
+    [
+        (45f, 111f, 16f, 5f, 0), (95f, 112f, 12f, 4f, 1), (180f, 111f, 22f, 6f, 0),
+        (270f, 112f, 14f, 5f, 2), (360f, 111f, 18f, 6f, 1), (490f, 112f, 24f, 7f, 0),
+        (620f, 111f, 15f, 5f, 2), (730f, 112f, 20f, 6f, 1), (850f, 111f, 26f, 7f, 0),
+        (990f, 112f, 16f, 5f, 2), (1110f, 111f, 22f, 6f, 1), (1240f, 112f, 18f, 5f, 0),
+        (70f, 848f, 18f, 6f, 1), (190f, 849f, 24f, 7f, 0), (320f, 848f, 15f, 5f, 2),
+        (450f, 849f, 20f, 6f, 1), (580f, 848f, 28f, 7f, 0), (710f, 849f, 16f, 5f, 2),
+        (840f, 848f, 22f, 6f, 1), (970f, 849f, 25f, 7f, 0), (1100f, 848f, 17f, 5f, 2),
+        (1230f, 849f, 21f, 6f, 1), (1360f, 848f, 26f, 7f, 0), (1490f, 849f, 19f, 6f, 2)
+    ];
+
+    private static readonly (float X, float Y, float Rx, float Ry)[] RainPuddles =
+    [
+        (340f, 640f, 38f, 15f),
+        (780f, 560f, 44f, 17f),
+        (1120f, 440f, 40f, 16f),
+        (1360f, 680f, 35f, 14f)
+    ];
+
+    private static readonly (float X, float Y)[] LotusPetals =
+    [
+        (120f, 530f), (260f, 410f), (410f, 670f), (530f, 510f),
+        (690f, 320f), (820f, 690f), (960f, 490f), (1080f, 620f),
+        (1210f, 380f), (1330f, 540f), (1450f, 710f), (1530f, 430f)
+    ];
+
+    private static readonly (float X, float Y)[] AlmondLeaves =
+    [
+        (150f, 380f), (290f, 620f), (470f, 360f), (610f, 590f),
+        (760f, 410f), (890f, 630f), (1030f, 350f), (1170f, 570f),
+        (1280f, 730f), (1410f, 460f), (1510f, 600f)
+    ];
+
     private float _totalTime;
     private InteractionResult? _activeDialogue;
+    private IInteractable? _interactingTarget;
 
     public HanoiExplorationScene(
         SaveData? saveData = null,
@@ -111,11 +153,12 @@ public sealed class HanoiExplorationScene : IScene
             MapBounds = new AABB(0, 0, 1600, 900)
         };
 
-        // 2. Setup Kinematics
+        // 2. Setup Kinematics (smooth cloud glide friction)
         Kinematics = new CharacterKinematics
         {
             Position = new Vector2((float)SaveData.Level1State.PlayerSpawnX, (float)SaveData.Level1State.PlayerSpawnY),
-            MaxSpeed = 200.0f
+            MaxSpeed = 200.0f,
+            Friction = 1200.0f
         };
 
         // 3. Setup Camera Tracker
@@ -309,13 +352,16 @@ public sealed class HanoiExplorationScene : IScene
         if (StateManager.CurrentState == GameState.MiniGameStalls && _stallPuzzleModal != null)
         {
             _stallPuzzleModal.Update(deltaTime);
-            if (_stallPuzzleModal.RequestNextScene)
+            if (_stallPuzzleModal.RequestNextScene || _stallPuzzleModal.RequestExit)
             {
+                if (_stallPuzzleModal.IsSolved)
+                {
+                    BloomEffect.TriggerWave(new Vector2(1480f, 480f), 100f, 2.5f);
+                    AudioService.PlaySfx(SfxType.ColorBloomWave);
+                    AudioService.PlaySfx(SfxType.GateUnlocked);
+                    RegisterObstacles();
+                }
                 StateManager.PopState();
-                BloomEffect.TriggerWave(new Vector2(1480f, 480f), 100f, 2.5f);
-                AudioService.PlaySfx(SfxType.ColorBloomWave);
-                AudioService.PlaySfx(SfxType.GateUnlocked);
-                RegisterObstacles();
             }
             return;
         }
@@ -365,8 +411,10 @@ public sealed class HanoiExplorationScene : IScene
             {
                 AudioService.PlaySfx(SfxType.ButtonClick);
                 string speaker = _activeDialogue?.DialogueSpeaker ?? DialogueBox.CurrentSpeaker;
-                var currentTarget = InteractionManager.CurrentTarget;
+                var currentTarget = InteractionManager.CurrentTarget ?? _interactingTarget;
+                var targetToCheck = _interactingTarget ?? currentTarget;
                 _activeDialogue = null;
+                _interactingTarget = null;
                 DialogueBox.Dismiss();
 
                 // Launch Pho Assembly after completing Q1 dialogue with Ba An
@@ -377,7 +425,7 @@ public sealed class HanoiExplorationScene : IScene
                     _phoAssemblyModal.Enter();
                     StateManager.PushState(GameState.MiniGamePho);
                 }
-                else if (currentTarget is LongBienGateInteractable)
+                else if (targetToCheck is LongBienGateInteractable || currentTarget is LongBienGateInteractable)
                 {
                     if (QuestFlags.Q2_Completed && !QuestFlags.Q3_Completed)
                     {
@@ -399,16 +447,52 @@ public sealed class HanoiExplorationScene : IScene
                     }
                 }
             }
+            _particles.EmitSteam(BaAn.Position + new Vector2(16f, -24f), deltaTime);
+            _particles.Update(deltaTime);
             return;
         }
 
         // 5. Update Movement & Kinematics when not in modal dialogue
+        if (InputService.IsDashJustPressed && Kinematics.TryDash(InputService.MovementDirection))
+        {
+            _particles.EmitCloudPuff(Kinematics.Position, count: 4);
+        }
+
         Kinematics.Update(InputService.MovementDirection, CollisionWorld, deltaTime);
 
-        if (Kinematics.CheckFootstepTrigger())
+        Vector2 playerPos = Kinematics.Position;
+        if (Kinematics.IsDashing)
         {
-            AudioService.PlaySfx(SfxType.StepStreet, 0.4f);
+            _particles.EmitCloudPuff(playerPos, count: 4);
         }
+        else if (Kinematics.IsMoving)
+        {
+            _puffTimer += deltaTime;
+            if (_puffTimer >= 0.12f)
+            {
+                _puffTimer = 0f;
+                _particles.EmitCloudPuff(playerPos, count: 4);
+            }
+
+            if (Kinematics.CheckFootstepTrigger())
+            {
+                AudioService.PlaySfx(SfxType.StepStreet, 0.4f);
+            }
+        }
+
+        // Companion guide sparkles at Bút Chì's tip
+        _sparkleTimer += deltaTime;
+        if (_sparkleTimer >= 0.35f)
+        {
+            _sparkleTimer = 0f;
+            _particles.EmitSparkles(playerPos + new Vector2(24f, -34f), HanoiPalette.ButChiMagicCyan, count: 2);
+        }
+
+        // Broth pot steam at Bà An's stall
+        _particles.EmitSteam(BaAn.Position + new Vector2(16f, -24f), deltaTime);
+
+        // Advance particle simulation
+        _particles.Update(deltaTime);
 
         // 6. Update Interaction Manager
         InteractionManager.Update(deltaTime, Kinematics.Position, context);
@@ -416,6 +500,7 @@ public sealed class HanoiExplorationScene : IScene
         if (InputService.IsInteractJustPressed)
         {
             var target = InteractionManager.CurrentTarget;
+            _interactingTarget = target;
             var result = InteractionManager.TryInteract(context);
             if (result != null)
             {
@@ -457,6 +542,8 @@ public sealed class HanoiExplorationScene : IScene
 
     public void Draw()
     {
+        if (!Raylib.IsWindowReady()) return;
+
         // Begin full-screen render pass through color restoration bloom shader
         BloomEffect.BeginRender();
 
@@ -506,7 +593,7 @@ public sealed class HanoiExplorationScene : IScene
             EntityId = BaAn.Id,
             FootY = BaAn.Position.Y,
             SubLayerPriority = 0,
-            DrawAction = _ => VectorRenderer.DrawMarketStall(BaAn.Position, "Quán Phở Bà An", HanoiPalette.TerracottaRoof, HanoiPalette.WallYellow)
+            DrawAction = _ => VectorRenderer.DrawBaAnPhoStall(BaAn.Position, "Quầy Phở", _totalTime)
         });
 
         // 5 Market Merchants
@@ -520,7 +607,21 @@ public sealed class HanoiExplorationScene : IScene
                 EntityId = m.Id,
                 FootY = m.Position.Y,
                 SubLayerPriority = 0,
-                DrawAction = _ => VectorRenderer.DrawMarketStall(m.Position, m.DisplayName, c1, c2)
+                DrawAction = _ =>
+                {
+                    if (m.Id == "Stall_ThitBo")
+                    {
+                        VectorRenderer.DrawBacTuBeefStall(m.Position, m.DisplayName, _totalTime);
+                    }
+                    else if (m.Id == "Stall_HanhLa")
+                    {
+                        VectorRenderer.DrawCoLanVeggieStall(m.Position, m.DisplayName, _totalTime);
+                    }
+                    else
+                    {
+                        VectorRenderer.DrawMarketStall(m.Position, m.DisplayName, c1, c2);
+                    }
+                }
             });
         }
 
@@ -567,6 +668,9 @@ public sealed class HanoiExplorationScene : IScene
         {
             yQueue.Entities[i].DrawAction(_totalTime);
         }
+
+        // --- 2.5 World-Space Particle Effects (Steam, Cloud Puffs, Sparkles) ---
+        _particles.Draw();
 
         // --- 3. Interaction Prompt Bubble (Drawn above target in world space) ---
         var target = InteractionManager.CurrentTarget;
@@ -664,6 +768,8 @@ public sealed class HanoiExplorationScene : IScene
 
     private void DrawLongBienGateEntity(Vector2 pos, float animTime)
     {
+        if (!Raylib.IsWindowReady()) return;
+
         if (!QuestFlags.Gate_LongBien_Unlocked)
         {
             // Barricade: Wooden sawhorse barrier
@@ -701,60 +807,222 @@ public sealed class HanoiExplorationScene : IScene
 
     private void DrawStreetEnvironment()
     {
-        // Ground stone cobblestones
+        if (!Raylib.IsWindowReady()) return;
+
+        // Ground stone cobblestones base
         Raylib.ClearBackground(HanoiPalette.StoneStreet);
 
-        // Grid lines for cobblestone pavement
-        for (int x = 0; x < 1600; x += 64)
+        // 1. Organic Cobblestone Ground: Deterministic staggered paver slabs with soft mortar joints (X: 0..1600, Y: 110..850)
+        Raylib.DrawRectangle(0, 110, 1600, 740, HanoiPalette.StoneMortar);
+        const float slabW = 54f;
+        const float slabH = 28f;
+        const float mortarGap = 3f;
+        int row = 0;
+        for (float y = 112f; y < 848f; y += slabH, row++)
         {
-            Raylib.DrawLine(x, 110, x, 850, HanoiPalette.StoneMortar);
-        }
-        for (int y = 110; y < 850; y += 48)
-        {
-            Raylib.DrawLine(0, y, 1600, y, HanoiPalette.StoneMortar);
+            float xOffset = (row % 2 == 1) ? (slabW * 0.5f) : 0f;
+            for (float x = -slabW + xOffset; x < 1620f; x += slabW)
+            {
+                Rectangle slabRec = new(x + mortarGap, y + mortarGap, slabW - mortarGap, slabH - mortarGap);
+                int hash = Math.Abs((int)(x * 73 + y * 31)) % 4;
+                Color stoneColor = hash switch
+                {
+                    0 => HanoiPalette.StoneStreet,
+                    1 => new Color(174, 165, 153, 255), // Sun-warmed flagstone
+                    2 => new Color(152, 143, 131, 255), // Shadowed slate
+                    _ => new Color(160, 151, 139, 255)  // Weathered granite
+                };
+                Raylib.DrawRectangleRounded(slabRec, 0.18f, 2, stoneColor);
+            }
         }
 
-        // Top curbs & colonial facades
-        Rectangle facade = new(0, 0, 1600, 110);
+        // 2. Moss Patches along colonial wall base (Y: 110) and curb base (Y: 850)
+        for (int i = 0; i < MossPatches.Length; i++)
+        {
+            var p = MossPatches[i];
+            Color mossColor = p.Shade switch
+            {
+                0 => new Color(48, 78, 42, 220),
+                1 => new Color(68, 105, 52, 225),
+                _ => new Color(90, 126, 68, 200)
+            };
+            Raylib.DrawEllipse((int)p.X, (int)p.Y, p.Rx, p.Ry, mossColor);
+            Raylib.DrawEllipse((int)p.X, (int)(p.Y - 1f), p.Rx * 0.6f, p.Ry * 0.5f, new Color(110, 148, 85, 180));
+        }
+
+        // 3. 4 Deterministic Rain Puddles reflecting sky color with gentle ripple arcs
+        for (int i = 0; i < RainPuddles.Length; i++)
+        {
+            var p = RainPuddles[i];
+            // Outer wet border
+            Raylib.DrawEllipse((int)p.X, (int)p.Y, p.Rx + 3f, p.Ry + 2f, new Color(112, 104, 96, 180));
+            // Sky reflection surface
+            Raylib.DrawEllipse((int)p.X, (int)p.Y, p.Rx, p.Ry, new Color(145, 188, 218, 200));
+            // Glare highlight
+            Raylib.DrawEllipse((int)(p.X - p.Rx * 0.2f), (int)(p.Y - p.Ry * 0.2f), p.Rx * 0.5f, p.Ry * 0.4f, new Color(195, 225, 245, 160));
+
+            // Gentle ripple arcs
+            float rip1 = ((_totalTime * 0.8f + p.X * 0.01f) % 2.5f) / 2.5f;
+            float rip2 = ((_totalTime * 0.8f + p.X * 0.01f + 1.25f) % 2.5f) / 2.5f;
+            Raylib.DrawEllipseLines((int)p.X, (int)p.Y, p.Rx * rip1, p.Ry * rip1, Raylib.ColorAlpha(Color.White, 0.35f * (1f - rip1)));
+            Raylib.DrawEllipseLines((int)p.X, (int)p.Y, p.Rx * rip2, p.Ry * rip2, Raylib.ColorAlpha(Color.White, 0.35f * (1f - rip2)));
+        }
+
+        // 4. Scattered Pink Lotus Petals and Red Almond Leaves
+        for (int i = 0; i < LotusPetals.Length; i++)
+        {
+            var p = LotusPetals[i];
+            Raylib.DrawEllipse((int)p.X, (int)p.Y, 5f, 2.8f, HanoiPalette.LotusPink);
+            Raylib.DrawCircleV(new Vector2(p.X - 1.5f, p.Y), 1.8f, HanoiPalette.LotusRose);
+        }
+
+        for (int i = 0; i < AlmondLeaves.Length; i++)
+        {
+            var p = AlmondLeaves[i];
+            Raylib.DrawEllipse((int)p.X, (int)p.Y, 6.5f, 3.8f, new Color(180, 42, 32, 240));
+            Raylib.DrawLineEx(new Vector2(p.X - 4f, p.Y), new Vector2(p.X + 4f, p.Y), 1.2f, new Color(220, 85, 65, 230));
+        }
+
+        // 5. Distant Long Biên Bridge Cantilever Steel Trusses with Warm Sunset Backlighting (Right Edge: X 1300..1600)
+        // Sunset sky backdrop
+        Raylib.DrawRectangleGradientV(1300, 0, 300, 110, new Color(245, 135, 95, 210), new Color(255, 195, 120, 160));
+        // Soft glowing setting sun
+        Raylib.DrawCircleV(new Vector2(1530f, 48f), 36f, Raylib.ColorAlpha(new Color(255, 215, 130, 255), 0.35f));
+        Raylib.DrawCircleV(new Vector2(1530f, 48f), 22f, Raylib.ColorAlpha(new Color(255, 240, 170, 255), 0.55f));
+
+        // Long Bien Bridge Cantilever Truss Spans
+        Raylib.DrawLineEx(new Vector2(1300, 110), new Vector2(1600, 110), 4.5f, HanoiPalette.RustedIron);
+        // Tower piers
+        Raylib.DrawLineEx(new Vector2(1380, 110), new Vector2(1380, 22), 4.5f, HanoiPalette.RustedIron);
+        Raylib.DrawLineEx(new Vector2(1520, 110), new Vector2(1520, 22), 4.5f, HanoiPalette.RustedIron);
+        // Arched cantilever upper chord
+        Vector2[] upperChord1 = [new(1300, 95), new(1340, 60), new(1380, 22), new(1415, 52), new(1450, 75)];
+        Vector2[] upperChord2 = [new(1450, 75), new(1485, 52), new(1520, 22), new(1560, 60), new(1600, 95)];
+        for (int i = 0; i < upperChord1.Length - 1; i++)
+        {
+            Raylib.DrawLineEx(upperChord1[i], upperChord1[i + 1], 4f, HanoiPalette.RustedIron);
+            Raylib.DrawLineEx(new Vector2(upperChord1[i].X, upperChord1[i].Y - 1f), new Vector2(upperChord1[i + 1].X, upperChord1[i + 1].Y - 1f), 1.5f, new Color(225, 140, 100, 180));
+        }
+        for (int i = 0; i < upperChord2.Length - 1; i++)
+        {
+            Raylib.DrawLineEx(upperChord2[i], upperChord2[i + 1], 4f, HanoiPalette.RustedIron);
+            Raylib.DrawLineEx(new Vector2(upperChord2[i].X, upperChord2[i].Y - 1f), new Vector2(upperChord2[i + 1].X, upperChord2[i + 1].Y - 1f), 1.5f, new Color(225, 140, 100, 180));
+        }
+        // Lattice cross bracing (X-truss diagonals)
+        (Vector2 A, Vector2 B)[] trussStruts =
+        [
+            (new(1300, 95), new(1340, 110)), (new(1340, 60), new(1300, 110)),
+            (new(1340, 60), new(1380, 110)), (new(1380, 22), new(1340, 110)),
+            (new(1380, 22), new(1415, 110)), (new(1415, 52), new(1380, 110)),
+            (new(1415, 52), new(1450, 110)), (new(1450, 75), new(1415, 110)),
+            (new(1450, 75), new(1485, 110)), (new(1485, 52), new(1450, 110)),
+            (new(1485, 52), new(1520, 110)), (new(1520, 22), new(1485, 110)),
+            (new(1520, 22), new(1560, 110)), (new(1560, 60), new(1520, 110)),
+            (new(1560, 60), new(1600, 110)), (new(1600, 95), new(1560, 110))
+        ];
+        for (int i = 0; i < trussStruts.Length; i++)
+        {
+            Raylib.DrawLineEx(trussStruts[i].A, trussStruts[i].B, 2.2f, HanoiPalette.RustedIronPatina);
+        }
+        // Rivet nodes
+        Raylib.DrawCircleV(new Vector2(1380, 22), 4.5f, HanoiPalette.RustedIron);
+        Raylib.DrawCircleV(new Vector2(1520, 22), 4.5f, HanoiPalette.RustedIron);
+        Raylib.DrawCircleV(new Vector2(1450, 75), 3.5f, HanoiPalette.RustedIron);
+
+        // 6. Upgraded Colonial Facades (Warm yellow walls, decorative cornices) (X: 0..1300)
+        Rectangle facade = new(0, 0, 1300, 110);
         Raylib.DrawRectangleRec(facade, HanoiPalette.WallYellow);
+        Raylib.DrawRectangle(0, 102, 1300, 8, HanoiPalette.WallYellowShadow);
         Raylib.DrawRectangleLinesEx(facade, 2f, HanoiPalette.CartoonOutline);
 
-        // Roof overhang
-        Rectangle roof = new(0, 0, 1600, 36);
+        // Terracotta Roof overhang with ridge tiles
+        Rectangle roof = new(0, 0, 1300, 36);
         Raylib.DrawRectangleRec(roof, HanoiPalette.TerracottaRoof);
-        Raylib.DrawLineEx(new Vector2(0, 36), new Vector2(1600, 36), 3f, HanoiPalette.TerracottaDark);
-
-        // Green shutters on upper facade
-        for (int sx = 80; sx < 1550; sx += 180)
+        for (int rx = 12; rx < 1300; rx += 24)
         {
-            Rectangle shutter = new(sx, 48, 48, 52);
-            VectorRenderer.DrawRoundedRect(shutter, 0.2f, HanoiPalette.ShutterGreen, HanoiPalette.CartoonOutline, 1.5f, withShadow: false);
-            Raylib.DrawLineEx(new Vector2(sx + 6, 62), new Vector2(sx + 42, 62), 1.5f, HanoiPalette.ShutterGreenDark);
-            Raylib.DrawLineEx(new Vector2(sx + 6, 74), new Vector2(sx + 42, 74), 1.5f, HanoiPalette.ShutterGreenDark);
-            Raylib.DrawLineEx(new Vector2(sx + 6, 86), new Vector2(sx + 42, 86), 1.5f, HanoiPalette.ShutterGreenDark);
+            Raylib.DrawLineEx(new Vector2(rx, 0), new Vector2(rx, 34), 2f, HanoiPalette.TerracottaLight);
+        }
+        Raylib.DrawLineEx(new Vector2(0, 36), new Vector2(1300, 36), 3.5f, HanoiPalette.TerracottaDark);
+
+        // Decorative molded cornice with dentil blocks
+        Raylib.DrawRectangle(0, 36, 1300, 8, HanoiPalette.WallYellowLight);
+        for (int dx = 10; dx < 1300; dx += 20)
+        {
+            Raylib.DrawRectangle(dx, 38, 7, 5, HanoiPalette.WallYellowShadow);
+        }
+        Raylib.DrawLineEx(new Vector2(0, 44), new Vector2(1300, 44), 2f, HanoiPalette.CartoonOutline);
+
+        // Green louvered shutters with bougainvillea flower boxes (X: 80..1260)
+        for (int sx = 80; sx < 1260; sx += 180)
+        {
+            Rectangle shutter = new(sx, 48, 48, 48);
+            VectorRenderer.DrawRoundedRect(shutter, 0.15f, HanoiPalette.ShutterGreen, HanoiPalette.CartoonOutline, 1.5f, withShadow: false);
+            // Slat shadows
+            Raylib.DrawLineEx(new Vector2(sx + 5, 57), new Vector2(sx + 43, 57), 1.5f, HanoiPalette.ShutterGreenDark);
+            Raylib.DrawLineEx(new Vector2(sx + 5, 66), new Vector2(sx + 43, 66), 1.5f, HanoiPalette.ShutterGreenDark);
+            Raylib.DrawLineEx(new Vector2(sx + 5, 75), new Vector2(sx + 43, 75), 1.5f, HanoiPalette.ShutterGreenDark);
+            Raylib.DrawLineEx(new Vector2(sx + 5, 84), new Vector2(sx + 43, 84), 1.5f, HanoiPalette.ShutterGreenDark);
+            // Brass center latch
+            Raylib.DrawCircleV(new Vector2(sx + 24, 71), 2f, new Color(220, 180, 60, 255));
+
+            // Bougainvillea flower box at window sill
+            Rectangle planter = new(sx - 3, 94, 54, 10);
+            VectorRenderer.DrawRoundedRect(planter, 0.2f, HanoiPalette.TerracottaDark, HanoiPalette.CartoonOutline, 1.2f, withShadow: false);
+            // Foliage leaves
+            Raylib.DrawCircleV(new Vector2(sx + 6, 95), 5f, new Color(42, 95, 55, 255));
+            Raylib.DrawCircleV(new Vector2(sx + 20, 94), 6f, new Color(52, 115, 65, 255));
+            Raylib.DrawCircleV(new Vector2(sx + 34, 95), 5f, new Color(42, 95, 55, 255));
+            Raylib.DrawCircleV(new Vector2(sx + 46, 96), 4.5f, new Color(35, 80, 45, 255));
+            // Vibrant bougainvillea flowers
+            Raylib.DrawCircleV(new Vector2(sx + 4, 97), 3f, new Color(230, 40, 120, 255));
+            Raylib.DrawCircleV(new Vector2(sx + 14, 98), 3.5f, new Color(245, 75, 150, 255));
+            Raylib.DrawCircleV(new Vector2(sx + 25, 96), 3.2f, new Color(225, 35, 110, 255));
+            Raylib.DrawCircleV(new Vector2(sx + 37, 98), 3.5f, new Color(250, 85, 160, 255));
+            Raylib.DrawCircleV(new Vector2(sx + 47, 97), 2.8f, new Color(220, 30, 105, 255));
+            // Cascading flower droplets
+            Raylib.DrawCircleV(new Vector2(sx + 16, 104), 2.5f, new Color(230, 40, 120, 255));
+            Raylib.DrawCircleV(new Vector2(sx + 35, 105), 2.2f, new Color(245, 75, 150, 255));
         }
 
-        // Bottom sidewalk curb
+        // 7. Warm Red Lanterns swaying gently in the breeze with 3-tier radial ambient glow halos (Warm Glow)
+        int lanternIndex = 0;
+        for (int lx = 170; lx < 1260; lx += 180, lanternIndex++)
+        {
+            float sway = MathF.Sin(_totalTime * 2.2f + lanternIndex * 0.8f) * 4.0f;
+            Raylib.DrawLineEx(new Vector2(lx, 44), new Vector2(lx + sway * 0.4f, 62), 1.2f, HanoiPalette.CartoonOutline);
+            Vector2 lCenter = new(lx + sway, 76f);
+
+            // 3-tier radial ambient glow halos
+            float pulse = 0.88f + 0.12f * MathF.Sin(_totalTime * 3.2f + lanternIndex);
+            Raylib.DrawCircleV(lCenter, 42f * pulse, Raylib.ColorAlpha(new Color(255, 175, 55, 255), 0.12f));
+            Raylib.DrawCircleV(lCenter, 26f * pulse, Raylib.ColorAlpha(new Color(255, 195, 75, 255), 0.22f));
+            Raylib.DrawCircleV(lCenter, 14f * pulse, Raylib.ColorAlpha(new Color(255, 225, 120, 255), 0.38f));
+
+            // Lantern body
+            Raylib.DrawEllipse((int)lCenter.X, (int)lCenter.Y, 9f, 13f, new Color(220, 40, 40, 255));
+            Raylib.DrawEllipseLines((int)lCenter.X, (int)lCenter.Y, 5f, 13f, new Color(175, 25, 25, 255));
+            Raylib.DrawLineEx(new Vector2(lCenter.X, lCenter.Y - 13f), new Vector2(lCenter.X, lCenter.Y + 13f), 1.2f, new Color(175, 25, 25, 255));
+            Raylib.DrawEllipseLines((int)lCenter.X, (int)lCenter.Y, 9f, 13f, HanoiPalette.CartoonOutline);
+
+            // Gold caps and tassel
+            Raylib.DrawRectangle((int)(lCenter.X - 4f), (int)(lCenter.Y - 15f), 8, 3, new Color(230, 190, 70, 255));
+            Raylib.DrawRectangle((int)(lCenter.X - 4f), (int)(lCenter.Y + 12f), 8, 3, new Color(230, 190, 70, 255));
+            Raylib.DrawLineEx(new Vector2(lCenter.X, lCenter.Y + 15f), new Vector2(lCenter.X + sway * 0.3f, lCenter.Y + 25f), 1.5f, new Color(235, 195, 75, 255));
+        }
+
+        // 8. Bottom sidewalk curb (Y: 850..900)
         Rectangle bottomCurb = new(0, 850, 1600, 50);
         Raylib.DrawRectangleRec(bottomCurb, HanoiPalette.StoneCurb);
         Raylib.DrawLineEx(new Vector2(0, 850), new Vector2(1600, 850), 3f, HanoiPalette.CartoonOutline);
-
-        // Distant Long Biên Bridge steel trusses silhouette on right edge
-        Vector2[] girderPoints =
-        [
-            new(1350, 110), new(1420, 40), new(1490, 110),
-            new(1490, 110), new(1560, 40), new(1600, 110)
-        ];
-        for (int i = 0; i < girderPoints.Length - 1; i += 3)
+        for (int kx = 60; kx < 1600; kx += 60)
         {
-            Raylib.DrawLineEx(girderPoints[i], girderPoints[i + 1], 4f, HanoiPalette.RustedIron);
-            Raylib.DrawLineEx(girderPoints[i + 1], girderPoints[i + 2], 4f, HanoiPalette.RustedIron);
-            Raylib.DrawLineEx(girderPoints[i], girderPoints[i + 2], 3f, HanoiPalette.RustedIronPatina);
+            Raylib.DrawLineEx(new Vector2(kx, 850), new Vector2(kx, 900), 1.5f, HanoiPalette.StoneMortar);
         }
     }
 
     private static void DrawDialogueModal(InteractionResult result)
     {
+        if (!Raylib.IsWindowReady()) return;
         float boxW = 820f;
         float boxH = 124f;
         float boxX = (1280f - boxW) * 0.5f;
@@ -786,5 +1054,6 @@ public sealed class HanoiExplorationScene : IScene
     public void Dispose()
     {
         BloomEffect.Dispose();
+        VectorRenderer.UnloadStallTextures();
     }
 }

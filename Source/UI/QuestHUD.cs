@@ -77,14 +77,36 @@ public sealed class QuestHUD
 
     public void Draw(QuestFlags flags, int screenWidth = 1280)
     {
-        // 1. Draw Quest Tracker Card
-        VectorRenderer.DrawDropShadow(Bounds, 0.25f, offsetY: 3f, alpha: 0.22f);
-        Raylib.DrawRectangleRounded(Bounds, 0.25f, 6, new Color(253, 251, 245, 240));
-        Raylib.DrawRectangleRoundedLinesEx(Bounds, 0.25f, 6, 1.2f, new Color(70, 58, 52, 180));
+        if (!Raylib.IsWindowReady()) return;
 
-        // Left accent indicator strip
-        Rectangle strip = new(Bounds.X, Bounds.Y, 5f, Bounds.Height);
-        Raylib.DrawRectangleRounded(strip, 0.5f, 4, new Color(214, 158, 46, 255));
+        // 1. Draw Quest Tracker Card — Rustic Bamboo Pole Styling
+        VectorRenderer.DrawDropShadow(Bounds, 0.25f, offsetY: 3f, alpha: 0.25f);
+
+        // Woven bamboo background
+        Raylib.DrawRectangleRounded(Bounds, 0.2f, 6, new Color(250, 246, 234, 245));
+
+        // Woven bamboo slats (subtle horizontal reed lines)
+        for (float y = Bounds.Y + 8f; y < Bounds.Y + Bounds.Height - 6f; y += 12f)
+        {
+            Raylib.DrawLineEx(new Vector2(Bounds.X + 12f, y), new Vector2(Bounds.X + Bounds.Width - 10f, y), 1.0f, new Color(228, 215, 190, 85));
+        }
+
+        // Segmented Bamboo Pole Frame (#C29B38)
+        Raylib.DrawRectangleRoundedLinesEx(Bounds, 0.2f, 6, 2.5f, new Color(194, 155, 56, 255));
+        Raylib.DrawRectangleRoundedLinesEx(new Rectangle(Bounds.X + 2f, Bounds.Y + 2f, Bounds.Width - 4f, Bounds.Height - 4f), 0.18f, 6, 1.0f, new Color(145, 110, 45, 180));
+
+        // Bamboo notch joints along the perimeter
+        DrawBambooJoint(new Vector2(Bounds.X + Bounds.Width * 0.35f, Bounds.Y + 1f), isVertical: false);
+        DrawBambooJoint(new Vector2(Bounds.X + Bounds.Width * 0.68f, Bounds.Y + 1f), isVertical: false);
+        DrawBambooJoint(new Vector2(Bounds.X + Bounds.Width * 0.35f, Bounds.Y + Bounds.Height - 1f), isVertical: false);
+        DrawBambooJoint(new Vector2(Bounds.X + Bounds.Width * 0.68f, Bounds.Y + Bounds.Height - 1f), isVertical: false);
+        DrawBambooJoint(new Vector2(Bounds.X + 1f, Bounds.Y + Bounds.Height * 0.5f), isVertical: true);
+        DrawBambooJoint(new Vector2(Bounds.X + Bounds.Width - 1f, Bounds.Y + Bounds.Height * 0.5f), isVertical: true);
+
+        // Left accent bamboo stalk
+        Rectangle strip = new(Bounds.X + 4f, Bounds.Y + 6f, 5f, Bounds.Height - 12f);
+        Raylib.DrawRectangleRounded(strip, 0.5f, 4, new Color(90, 155, 55, 255));
+        Raylib.DrawLineEx(new Vector2(strip.X, strip.Y + strip.Height * 0.45f), new Vector2(strip.X + strip.Width, strip.Y + strip.Height * 0.45f), 1.5f, new Color(55, 105, 35, 255));
 
         // Header tag
         FontManager.Instance.DrawText("NHIỆM VỤ HIỆN TẠI", new Vector2(Bounds.X + 16f, Bounds.Y + 8f), 10f, new Color(140, 109, 80, 255));
@@ -143,6 +165,23 @@ public sealed class QuestHUD
 
             VectorRenderer.DrawRoundedRect(toastRec, 0.4f, bg, border, 1.2f, withShadow: false);
             FontManager.Instance.DrawText(toast.Text, new Vector2(toastRec.X + 14f, toastRec.Y + 11f), 13f, textCol);
+        }
+    }
+
+    private static void DrawBambooJoint(Vector2 center, bool isVertical)
+    {
+        Color darkJoint = new(125, 85, 30, 230);
+        Color lightJoint = new(240, 210, 105, 255);
+
+        if (isVertical)
+        {
+            Raylib.DrawLineEx(new Vector2(center.X - 3f, center.Y - 1f), new Vector2(center.X + 3f, center.Y - 1f), 1.5f, darkJoint);
+            Raylib.DrawLineEx(new Vector2(center.X - 3f, center.Y + 1f), new Vector2(center.X + 3f, center.Y + 1f), 1.2f, lightJoint);
+        }
+        else
+        {
+            Raylib.DrawLineEx(new Vector2(center.X - 1f, center.Y - 3f), new Vector2(center.X - 1f, center.Y + 3f), 1.5f, darkJoint);
+            Raylib.DrawLineEx(new Vector2(center.X + 1f, center.Y - 3f), new Vector2(center.X + 1f, center.Y + 3f), 1.2f, lightJoint);
         }
     }
 }

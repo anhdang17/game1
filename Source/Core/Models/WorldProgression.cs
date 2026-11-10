@@ -14,6 +14,16 @@ public static class RegionIds
     public const string HoiAn = "HoiAn";
     public const string SaiGon = "SaiGon";
     public const string Saigon = "SaiGon";
+
+    // 7 World Wonders
+    public const string Kyoto = "Kyoto";
+    public const string Cairo = "Cairo";
+    public const string Paris = "Paris";
+    public const string Rio = "Rio";
+    public const string BacCuc = "BacCuc";
+    public const string Arctic = "BacCuc";
+    public const string BauTroiKyUc = "BauTroiKyUc";
+    public const string SkyOfMemories = "BauTroiKyUc";
 }
 
 /// <summary>
@@ -35,6 +45,13 @@ public sealed class WorldProgression
     public const string RegionHue = "Hue";
     public const string RegionHoiAn = "HoiAn";
     public const string RegionSaigon = "Saigon";
+
+    public const string RegionKyoto = "Kyoto";
+    public const string RegionCairo = "Cairo";
+    public const string RegionParis = "Paris";
+    public const string RegionRio = "Rio";
+    public const string RegionBacCuc = "BacCuc";
+    public const string RegionBauTroiKyUc = "BauTroiKyUc";
 
     private List<string> _unlockedRegions = new() { RegionHanoi };
     private List<string> _completedRegions = new();

@@ -30,6 +30,8 @@ public sealed class StallPuzzleScene : IScene
     private readonly LevelProgressionService _progression;
     private readonly SpatialGridEngine _grid = new();
     private readonly GrayShadowLetterModal _letterModal = new();
+    private readonly Dictionary<string, Vector2> _visualPositions = new();
+    private readonly ParticleEmitter _particles = new();
 
     // UI state
     private string? _selectedObjectId;
@@ -41,10 +43,13 @@ public sealed class StallPuzzleScene : IScene
     private string? _hintMessage;
     private float _hintTimer;
     private float _bloomProgress;
+    private Vector2? _dragStartPos;
+    private string? _dragEntityId;
 
     public bool IsSolved => _solved;
     public int MoveCount => _moveCount;
     public bool RequestNextScene { get; private set; }
+    public bool RequestExit { get; private set; }
 
     // Grid rendering constants
     private const float GridOriginX = 160f;
@@ -83,20 +88,50 @@ public sealed class StallPuzzleScene : IScene
         _audioService = audioService;
         _inputService = inputService;
         _progression = new LevelProgressionService(_saveData, _eventBus);
+
+        foreach (var entity in _grid.Entities)
+        {
+            _visualPositions[entity.Id] = new Vector2(entity.X, entity.Y);
+        }
     }
 
     public void Enter()
     {
         _questManager.StartQuest(HanoiQuests.Quest3Id);
-        _hintMessage = "Bút Chì: Đẩy các sạp hàng để mở thông đường từ trái sang phải theo hàng giữa ra cổng cầu!";
+        _hintMessage = "Bút Chì: Hãy dọn các sạp hàng để mở lối thông từ cổng vào bên trái sang Cầu Long Biên bên phải!";
         _hintTimer = 6f;
         RequestNextScene = false;
+        RequestExit = false;
+        _dragStartPos = null;
+        _dragEntityId = null;
+
+        _visualPositions.Clear();
+        foreach (var entity in _grid.Entities)
+        {
+            _visualPositions[entity.Id] = new Vector2(entity.X, entity.Y);
+        }
+        _particles.Clear();
     }
 
     public void Update(float dt)
     {
         _totalTime += dt;
         if (_hintTimer > 0f) _hintTimer -= dt;
+
+        foreach (var entity in _grid.Entities)
+        {
+            Vector2 target = new(entity.X, entity.Y);
+            if (!_visualPositions.TryGetValue(entity.Id, out Vector2 current))
+            {
+                _visualPositions[entity.Id] = target;
+            }
+            else
+            {
+                _visualPositions[entity.Id] = Vector2.Lerp(current, target, Math.Clamp(dt * 14f, 0f, 1f));
+            }
+        }
+
+        _particles.Update(dt);
 
         if (_letterModal.IsActive)
         {
@@ -160,6 +195,10 @@ public sealed class StallPuzzleScene : IScene
                 updated?.X ?? fromX, updated?.Y ?? fromY, true));
             _audioService?.PlaySfx(SfxType.StepStreet, 0.4f);
 
+            float puffX = GridOriginX + (fromX + 0.5f) * CellSize;
+            float puffY = GridOriginY + (fromY + 0.5f) * CellSize;
+            _particles.EmitCloudPuff(new Vector2(puffX, puffY), 4);
+
             _pathClear = _grid.IsPathClear();
             if (_pathClear && !_solved)
             {
@@ -178,33 +217,222 @@ public sealed class StallPuzzleScene : IScene
         _grid.ResetGrid();
         _selectedObjectId = null;
         _moveCount = 0;
+        _visualPositions.Clear();
+        foreach (var entity in _grid.Entities)
+        {
+            _visualPositions[entity.Id] = new Vector2(entity.X, entity.Y);
+        }
+        _particles.Clear();
         _eventBus.Publish(new StallPuzzleResetEvent());
         _hintMessage = "Đã làm lại! Thử tìm đường khác nhé.";
         _hintTimer = 3f;
         _audioService?.PlaySfx(SfxType.ButtonClick);
     }
 
+    public void TriggerHint()
+    {
+        var hintMgr = new HintManager();
+        _hintMessage = hintMgr.GetStallPuzzleHint(_grid.IsPathClear(), _moveCount);
+        _hintTimer = 6f;
+        _audioService?.PlaySfx(SfxType.DialogueBlip);
+    }
+
+    private void CycleSelectedEntity()
+    {
+        var movable = _grid.Entities.Where(e => !e.IsStaticWall).ToList();
+        if (movable.Count == 0) return;
+
+        int currentIdx = movable.FindIndex(e => e.Id == _selectedObjectId);
+        int nextIdx = (currentIdx + 1) % movable.Count;
+        _selectedObjectId = movable[nextIdx].Id;
+        _audioService?.PlaySfx(SfxType.ButtonClick);
+    }
+
     private void HandleInput()
     {
+        if (_inputService != null && _inputService.IsCancelJustPressed)
+        {
+            RequestExit = true;
+            return;
+        }
+
         if (!Raylib.IsWindowReady()) return;
+
+        if (Raylib.IsKeyPressed(KeyboardKey.Escape))
+        {
+            RequestExit = true;
+            return;
+        }
 
         Vector2 mouse = Raylib.GetMousePosition();
 
+        // 1. UI Buttons in sidebar (Reset, Hint, Exit)
+        Rectangle btnReset = new(1050f, 490f, 92f, 36f);
+        Rectangle btnHint = new(1154f, 490f, 92f, 36f);
+        Rectangle btnExit = new(1050f, 536f, 196f, 36f);
+
+        if (Raylib.IsMouseButtonPressed(MouseButton.Left))
+        {
+            if (Raylib.CheckCollisionPointRec(mouse, btnReset))
+            {
+                ResetGrid();
+                return;
+            }
+            if (Raylib.CheckCollisionPointRec(mouse, btnHint))
+            {
+                TriggerHint();
+                return;
+            }
+            if (Raylib.CheckCollisionPointRec(mouse, btnExit))
+            {
+                RequestExit = true;
+                return;
+            }
+        }
+
+        // 2. Click on selected entity's push arrow buttons
+        if (_selectedObjectId != null)
+        {
+            var selEntity = GetEntityById(_selectedObjectId);
+            if (selEntity != null)
+            {
+                Vector2 visualPos = _visualPositions.TryGetValue(selEntity.Id, out var vp) ? vp : new Vector2(selEntity.X, selEntity.Y);
+                float x = GridOriginX + visualPos.X * CellSize;
+                float y = GridOriginY + visualPos.Y * CellSize;
+                float w = selEntity.Width * CellSize;
+                float h = selEntity.Height * CellSize;
+                float cx = x + w / 2f, cy = y + h / 2f;
+
+                Rectangle upArrowRec = new(cx - 20f, cy - h / 2f - 32f, 40f, 28f);
+                Rectangle downArrowRec = new(cx - 20f, cy + h / 2f + 4f, 40f, 28f);
+                Rectangle leftArrowRec = new(cx - w / 2f - 32f, cy - 20f, 28f, 40f);
+                Rectangle rightArrowRec = new(cx + w / 2f + 4f, cy - 20f, 28f, 40f);
+
+                if (Raylib.IsMouseButtonPressed(MouseButton.Left))
+                {
+                    if (selEntity.CanPushVertically && Raylib.CheckCollisionPointRec(mouse, upArrowRec))
+                    {
+                        Push(_selectedObjectId, Direction.Up);
+                        return;
+                    }
+                    if (selEntity.CanPushVertically && Raylib.CheckCollisionPointRec(mouse, downArrowRec))
+                    {
+                        Push(_selectedObjectId, Direction.Down);
+                        return;
+                    }
+                    if (selEntity.CanPushHorizontally && Raylib.CheckCollisionPointRec(mouse, leftArrowRec))
+                    {
+                        Push(_selectedObjectId, Direction.Left);
+                        return;
+                    }
+                    if (selEntity.CanPushHorizontally && Raylib.CheckCollisionPointRec(mouse, rightArrowRec))
+                    {
+                        Push(_selectedObjectId, Direction.Right);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // 3. Left Click on Entity or Adjacent Empty Cell
         if (Raylib.IsMouseButtonPressed(MouseButton.Left))
         {
             string? clickedId = GetEntityAtMouse(mouse);
             if (clickedId != null)
             {
                 _selectedObjectId = (_selectedObjectId == clickedId) ? null : clickedId;
+                _dragStartPos = mouse;
+                _dragEntityId = _selectedObjectId;
                 _audioService?.PlaySfx(SfxType.ButtonClick);
+                return;
             }
-            else
+
+            // If an entity was selected, check if user clicked on an adjacent empty tile in the grid
+            if (_selectedObjectId != null)
             {
+                var selEntity = GetEntityById(_selectedObjectId);
+                if (selEntity != null && mouse.X >= GridOriginX && mouse.Y >= GridOriginY)
+                {
+                    int clickedCol = (int)((mouse.X - GridOriginX) / CellSize);
+                    int clickedRow = (int)((mouse.Y - GridOriginY) / CellSize);
+
+                    if (clickedCol >= 0 && clickedCol < _grid.Width && clickedRow >= 0 && clickedRow < _grid.Height)
+                    {
+                        // Check adjacency to selected entity
+                        if (selEntity.CanPushVertically && clickedCol >= selEntity.X && clickedCol < selEntity.X + selEntity.Width && clickedRow == selEntity.Y - 1)
+                        {
+                            Push(_selectedObjectId, Direction.Up);
+                            return;
+                        }
+                        if (selEntity.CanPushVertically && clickedCol >= selEntity.X && clickedCol < selEntity.X + selEntity.Width && clickedRow == selEntity.Y + selEntity.Height)
+                        {
+                            Push(_selectedObjectId, Direction.Down);
+                            return;
+                        }
+                        if (selEntity.CanPushHorizontally && clickedRow >= selEntity.Y && clickedRow < selEntity.Y + selEntity.Height && clickedCol == selEntity.X - 1)
+                        {
+                            Push(_selectedObjectId, Direction.Left);
+                            return;
+                        }
+                        if (selEntity.CanPushHorizontally && clickedRow >= selEntity.Y && clickedRow < selEntity.Y + selEntity.Height && clickedCol == selEntity.X + selEntity.Width)
+                        {
+                            Push(_selectedObjectId, Direction.Right);
+                            return;
+                        }
+                    }
+                }
+
                 _selectedObjectId = null;
             }
         }
 
-        // Push selected object with WASD/arrows
+        // 4. Mouse Drag gesture
+        if (Raylib.IsMouseButtonDown(MouseButton.Left) && _dragStartPos.HasValue && !string.IsNullOrEmpty(_dragEntityId))
+        {
+            Vector2 dragDelta = mouse - _dragStartPos.Value;
+            if (dragDelta.Length() >= 24f)
+            {
+                Direction? dragDir = null;
+                if (MathF.Abs(dragDelta.X) > MathF.Abs(dragDelta.Y))
+                {
+                    dragDir = dragDelta.X > 0 ? Direction.Right : Direction.Left;
+                }
+                else
+                {
+                    dragDir = dragDelta.Y > 0 ? Direction.Down : Direction.Up;
+                }
+
+                if (dragDir.HasValue)
+                {
+                    Push(_dragEntityId, dragDir.Value);
+                }
+                _dragStartPos = null;
+                _dragEntityId = null;
+            }
+        }
+        else if (Raylib.IsMouseButtonReleased(MouseButton.Left))
+        {
+            _dragStartPos = null;
+            _dragEntityId = null;
+        }
+
+        // 5. Keyboard Navigation & Selection (Tab, 1..5)
+        if (Raylib.IsKeyPressed(KeyboardKey.Tab))
+        {
+            CycleSelectedEntity();
+        }
+
+        var movableList = _grid.Entities.Where(e => !e.IsStaticWall).ToList();
+        for (int i = 0; i < Math.Min(movableList.Count, 5); i++)
+        {
+            if (Raylib.IsKeyPressed(KeyboardKey.One + i))
+            {
+                _selectedObjectId = movableList[i].Id;
+                _audioService?.PlaySfx(SfxType.ButtonClick);
+            }
+        }
+
+        // 6. Push selected object with WASD/arrows
         if (_selectedObjectId != null)
         {
             Direction? dir = null;
@@ -218,6 +446,18 @@ public sealed class StallPuzzleScene : IScene
                 Push(_selectedObjectId, dir.Value);
             }
         }
+        else
+        {
+            // Auto-select when player presses movement keys without selection
+            if (Raylib.IsKeyPressed(KeyboardKey.Up) || Raylib.IsKeyPressed(KeyboardKey.Down) ||
+                Raylib.IsKeyPressed(KeyboardKey.Left) || Raylib.IsKeyPressed(KeyboardKey.Right) ||
+                Raylib.IsKeyPressed(KeyboardKey.W) || Raylib.IsKeyPressed(KeyboardKey.S) ||
+                Raylib.IsKeyPressed(KeyboardKey.A) || Raylib.IsKeyPressed(KeyboardKey.D) ||
+                Raylib.IsKeyPressed(KeyboardKey.Space) || Raylib.IsKeyPressed(KeyboardKey.Enter))
+            {
+                CycleSelectedEntity();
+            }
+        }
 
         if (Raylib.IsKeyPressed(KeyboardKey.R))
         {
@@ -226,10 +466,7 @@ public sealed class StallPuzzleScene : IScene
 
         if ((_inputService != null && _inputService.IsHintJustPressed) || (Raylib.IsWindowReady() && Raylib.IsKeyPressed(KeyboardKey.H)))
         {
-            var hintMgr = new HintManager();
-            _hintMessage = hintMgr.GetStallPuzzleHint(_grid.IsPathClear(), _moveCount);
-            _hintTimer = 6f;
-            _audioService?.PlaySfx(SfxType.DialogueBlip);
+            TriggerHint();
         }
     }
 
@@ -245,8 +482,9 @@ public sealed class StallPuzzleScene : IScene
         foreach (var entity in _grid.Entities)
         {
             if (entity.IsStaticWall) continue;
-            float x1 = GridOriginX + entity.X * CellSize;
-            float y1 = GridOriginY + entity.Y * CellSize;
+            Vector2 visualPos = _visualPositions.TryGetValue(entity.Id, out var vp) ? vp : new Vector2(entity.X, entity.Y);
+            float x1 = GridOriginX + visualPos.X * CellSize;
+            float y1 = GridOriginY + visualPos.Y * CellSize;
             float w = entity.Width * CellSize;
             float h = entity.Height * CellSize;
             Rectangle rect = new(x1 + 2f, y1 + 2f, w - 4f, h - 4f);
@@ -267,6 +505,14 @@ public sealed class StallPuzzleScene : IScene
         _progression.CompleteLevel1();
         _eventBus.Publish(new StallPuzzleSolvedEvent(_moveCount));
 
+        // Confetti celebration when puzzle is solved
+        Vector2 gateCenter = new(GridOriginX + (_grid.Width - 0.5f) * CellSize, GridOriginY + 2.5f * CellSize);
+        Vector2 boardCenter = new(GridOriginX + _grid.Width * 0.5f * CellSize, GridOriginY + _grid.Height * 0.5f * CellSize);
+        _particles.EmitConfetti(gateCenter, 30);
+        _particles.EmitConfetti(boardCenter, 30);
+        _particles.EmitSparkles(gateCenter, HanoiPalette.WallYellow, 12);
+        _particles.EmitSparkles(boardCenter, HanoiPalette.LotusPink, 12);
+
         _audioService?.PlaySfx(SfxType.GateUnlocked);
         _audioService?.PlaySfx(SfxType.ColorBloomWave);
     }
@@ -286,6 +532,8 @@ public sealed class StallPuzzleScene : IScene
         DrawSidebar();
         DrawHintMessage();
 
+        _particles.Draw();
+
         if (_solved) DrawSolveOverlay();
 
         if (_letterModal.IsActive)
@@ -301,10 +549,10 @@ public sealed class StallPuzzleScene : IScene
         FontManager.Instance.DrawTextOutline(title, new Vector2(640f - sz.X / 2f, 20f), 26f,
             HanoiPalette.WallYellow, HanoiPalette.CartoonOutline, 2f);
 
-        string sub = "Click chọn vật · WASD/Mũi tên để đẩy · [R] Làm lại · [H] Gợi ý";
+        string sub = "Click/kéo sạp · Bấm nút mũi tên hoặc WASD · [Tab/1-5] Chọn sạp · [R] Làm lại · [H] Gợi ý · [ESC] Thoát";
         Vector2 subSz = FontManager.Instance.MeasureText(sub, 11f);
         FontManager.Instance.DrawText(sub, new Vector2(640f - subSz.X / 2f, 56f), 11f,
-            new Color(100, 80, 60, 200));
+            new Color(90, 70, 50, 230));
     }
 
     private void DrawGridBackground()
@@ -378,8 +626,9 @@ public sealed class StallPuzzleScene : IScene
         {
             if (entity.IsStaticWall) continue;
 
-            float x = GridOriginX + entity.X * CellSize;
-            float y = GridOriginY + entity.Y * CellSize;
+            Vector2 visualPos = _visualPositions.TryGetValue(entity.Id, out var vp) ? vp : new Vector2(entity.X, entity.Y);
+            float x = GridOriginX + visualPos.X * CellSize;
+            float y = GridOriginY + visualPos.Y * CellSize;
             float w = entity.Width * CellSize;
             float h = entity.Height * CellSize;
 
@@ -399,30 +648,53 @@ public sealed class StallPuzzleScene : IScene
             VectorRenderer.DrawRoundedRect(rect, 0.3f, entityColor, HanoiPalette.CartoonOutline,
                 isSelected ? 2.5f : 1.5f);
 
+            if (entity.Id == "Obj_FruitStall")
+            {
+                VectorRenderer.DrawCoLanVeggieStall(new Vector2(x + w * 0.5f, y + h - 6f), "", _totalTime, scale: 0.62f, withShadow: false);
+            }
+
             // Label
             EntityLabels.TryGetValue(entity.Id, out string? label);
             label ??= entity.Name;
             Vector2 lsz = FontManager.Instance.MeasureText(label, 11f);
-            FontManager.Instance.DrawText(label,
-                new Vector2(x + w / 2f - lsz.X / 2f, y + h / 2f - 7f), 11f, HanoiPalette.CartoonOutline);
+            if (entity.Id == "Obj_FruitStall")
+            {
+                FontManager.Instance.DrawTextOutline(label,
+                    new Vector2(x + w / 2f - lsz.X / 2f, y + 6f), 10f, HanoiPalette.CartoonOutline, Color.White, 1.2f);
+            }
+            else
+            {
+                FontManager.Instance.DrawText(label,
+                    new Vector2(x + w / 2f - lsz.X / 2f, y + h / 2f - 7f), 11f, HanoiPalette.CartoonOutline);
+            }
 
-            // Push arrows if selected
+            // Direction badge on corner
+            string dirBadge = entity.CanPushHorizontally && entity.CanPushVertically ? "✥" : (entity.CanPushVertically ? "↕" : "↔");
+            FontManager.Instance.DrawText(dirBadge, new Vector2(x + 5f, y + 4f), 10f, new Color(80, 60, 40, 180));
+
+            // Push arrow buttons if selected
             if (isSelected)
             {
                 float cx = x + w / 2f, cy = y + h / 2f;
                 if (entity.CanPushVertically)
                 {
-                    Raylib.DrawTriangle(new Vector2(cx, cy - h / 2f - 18f), new Vector2(cx - 8f, cy - h / 2f - 6f),
-                        new Vector2(cx + 8f, cy - h / 2f - 6f), Raylib.ColorAlpha(Color.White, 0.8f));
-                    Raylib.DrawTriangle(new Vector2(cx, cy + h / 2f + 18f), new Vector2(cx + 8f, cy + h / 2f + 6f),
-                        new Vector2(cx - 8f, cy + h / 2f + 6f), Raylib.ColorAlpha(Color.White, 0.8f));
+                    Rectangle upBtn = new(cx - 18f, cy - h / 2f - 30f, 36f, 26f);
+                    VectorRenderer.DrawRoundedRect(upBtn, 0.4f, new Color(255, 230, 80, 240), HanoiPalette.CartoonOutline, 1.5f, withShadow: false);
+                    Raylib.DrawTriangle(new Vector2(cx, upBtn.Y + 4f), new Vector2(cx - 7f, upBtn.Y + 19f), new Vector2(cx + 7f, upBtn.Y + 19f), HanoiPalette.CartoonOutline);
+
+                    Rectangle downBtn = new(cx - 18f, cy + h / 2f + 4f, 36f, 26f);
+                    VectorRenderer.DrawRoundedRect(downBtn, 0.4f, new Color(255, 230, 80, 240), HanoiPalette.CartoonOutline, 1.5f, withShadow: false);
+                    Raylib.DrawTriangle(new Vector2(cx, downBtn.Y + 22f), new Vector2(cx + 7f, downBtn.Y + 7f), new Vector2(cx - 7f, downBtn.Y + 7f), HanoiPalette.CartoonOutline);
                 }
                 if (entity.CanPushHorizontally)
                 {
-                    Raylib.DrawTriangle(new Vector2(cx - w / 2f - 18f, cy), new Vector2(cx - w / 2f - 6f, cy - 8f),
-                        new Vector2(cx - w / 2f - 6f, cy + 8f), Raylib.ColorAlpha(Color.White, 0.8f));
-                    Raylib.DrawTriangle(new Vector2(cx + w / 2f + 18f, cy), new Vector2(cx + w / 2f + 6f, cy + 8f),
-                        new Vector2(cx + w / 2f + 6f, cy - 8f), Raylib.ColorAlpha(Color.White, 0.8f));
+                    Rectangle leftBtn = new(cx - w / 2f - 30f, cy - 18f, 26f, 36f);
+                    VectorRenderer.DrawRoundedRect(leftBtn, 0.4f, new Color(255, 230, 80, 240), HanoiPalette.CartoonOutline, 1.5f, withShadow: false);
+                    Raylib.DrawTriangle(new Vector2(leftBtn.X + 4f, cy), new Vector2(leftBtn.X + 19f, cy - 7f), new Vector2(leftBtn.X + 19f, cy + 7f), HanoiPalette.CartoonOutline);
+
+                    Rectangle rightBtn = new(cx + w / 2f + 4f, cy - 18f, 26f, 36f);
+                    VectorRenderer.DrawRoundedRect(rightBtn, 0.4f, new Color(255, 230, 80, 240), HanoiPalette.CartoonOutline, 1.5f, withShadow: false);
+                    Raylib.DrawTriangle(new Vector2(rightBtn.X + 22f, cy), new Vector2(rightBtn.X + 7f, cy + 7f), new Vector2(rightBtn.X + 7f, cy - 7f), HanoiPalette.CartoonOutline);
                 }
             }
         }
@@ -433,12 +705,47 @@ public sealed class StallPuzzleScene : IScene
         var path = _grid.FindPath();
         if (path != null && path.Count > 1)
         {
-            // Draw real-time connecting golden ribbon
+            float pulse = 0.35f + 0.25f * MathF.Sin(_totalTime * 4.5f);
+            Color outerGoldAura = Raylib.ColorAlpha(new Color(255, 215, 0, 255), pulse);
+            Color innerBrightGold = new(255, 235, 120, 255);
+
+            // 1. Outer pulse aura ribbon (width 10px, glowing gold)
             for (int i = 0; i < path.Count - 1; i++)
             {
                 Vector2 p1 = new(GridOriginX + (path[i].x + 0.5f) * CellSize, GridOriginY + (path[i].y + 0.5f) * CellSize);
                 Vector2 p2 = new(GridOriginX + (path[i + 1].x + 0.5f) * CellSize, GridOriginY + (path[i + 1].y + 0.5f) * CellSize);
-                Raylib.DrawLineEx(p1, p2, 6f, new Color(255, 215, 0, 230));
+                Raylib.DrawLineEx(p1, p2, 10f, outerGoldAura);
+                Raylib.DrawCircleV(p1, 5f, outerGoldAura);
+            }
+            Vector2 lastP = new(GridOriginX + (path[^1].x + 0.5f) * CellSize, GridOriginY + (path[^1].y + 0.5f) * CellSize);
+            Raylib.DrawCircleV(lastP, 5f, outerGoldAura);
+
+            // 2. Inner bright ribbon (width 4px, Color(255, 235, 120))
+            for (int i = 0; i < path.Count - 1; i++)
+            {
+                Vector2 p1 = new(GridOriginX + (path[i].x + 0.5f) * CellSize, GridOriginY + (path[i].y + 0.5f) * CellSize);
+                Vector2 p2 = new(GridOriginX + (path[i + 1].x + 0.5f) * CellSize, GridOriginY + (path[i + 1].y + 0.5f) * CellSize);
+                Raylib.DrawLineEx(p1, p2, 4f, innerBrightGold);
+                Raylib.DrawCircleV(p1, 2f, innerBrightGold);
+            }
+            Raylib.DrawCircleV(lastP, 2f, innerBrightGold);
+
+            // 3. Flowing dash sparkles along the path towards Long Bien gate
+            int segCount = path.Count - 1;
+            int sparkCount = Math.Max(3, segCount * 2);
+            for (int s = 0; s < sparkCount; s++)
+            {
+                float phase = (_totalTime * 2.5f + (float)s / sparkCount * segCount) % segCount;
+                int segIdx = (int)phase;
+                if (segIdx >= 0 && segIdx < segCount)
+                {
+                    float t = phase - segIdx;
+                    Vector2 sp1 = new(GridOriginX + (path[segIdx].x + 0.5f) * CellSize, GridOriginY + (path[segIdx].y + 0.5f) * CellSize);
+                    Vector2 sp2 = new(GridOriginX + (path[segIdx + 1].x + 0.5f) * CellSize, GridOriginY + (path[segIdx + 1].y + 0.5f) * CellSize);
+                    Vector2 sparkPos = Vector2.Lerp(sp1, sp2, t);
+                    Raylib.DrawCircleV(sparkPos, 3.5f, Color.White);
+                    Raylib.DrawCircleV(sparkPos, 6.0f, Raylib.ColorAlpha(new Color(255, 250, 180, 255), 0.65f));
+                }
             }
         }
 
@@ -471,20 +778,33 @@ public sealed class StallPuzzleScene : IScene
             HanoiPalette.WallYellow, HanoiPalette.CartoonOutline, 2f);
 
         // Legend
-        Rectangle legendBox = new(1050f, 260f, 196f, 220f);
+        Rectangle legendBox = new(1050f, 255f, 196f, 215f);
         VectorRenderer.DrawRoundedRect(legendBox, 0.25f, new Color(255, 252, 240, 220),
             HanoiPalette.CartoonOutline, 1.5f);
-        FontManager.Instance.DrawText("Chú thích:", new Vector2(1065f, 274f), 12f, new Color(80, 60, 40, 255));
+        FontManager.Instance.DrawText("Chú thích:", new Vector2(1065f, 268f), 12f, new Color(80, 60, 40, 255));
 
         int li = 0;
         foreach (var (id, color) in EntityColors)
         {
-            float lY = 295f + li * 36f;
+            float lY = 290f + li * 34f;
             Raylib.DrawRectangleRounded(new Rectangle(1065f, lY, 20f, 16f), 0.3f, 4, color);
             EntityLabels.TryGetValue(id, out string? lbl);
             FontManager.Instance.DrawText(lbl ?? id, new Vector2(1092f, lY), 11f, new Color(60, 45, 30, 255));
             li++;
         }
+
+        // Action Buttons: Reset, Hint, Exit
+        Rectangle btnReset = new(1050f, 485f, 92f, 36f);
+        VectorRenderer.DrawRoundedRect(btnReset, 0.35f, new Color(255, 215, 64, 255), HanoiPalette.CartoonOutline, 1.5f);
+        FontManager.Instance.DrawText("[R] Làm lại", new Vector2(btnReset.X + 14f, btnReset.Y + 11f), 12f, HanoiPalette.CartoonOutline);
+
+        Rectangle btnHint = new(1154f, 485f, 92f, 36f);
+        VectorRenderer.DrawRoundedRect(btnHint, 0.35f, new Color(130, 210, 240, 255), HanoiPalette.CartoonOutline, 1.5f);
+        FontManager.Instance.DrawText("[H] Gợi ý", new Vector2(btnHint.X + 18f, btnHint.Y + 11f), 12f, HanoiPalette.CartoonOutline);
+
+        Rectangle btnExit = new(1050f, 530f, 196f, 36f);
+        VectorRenderer.DrawRoundedRect(btnExit, 0.35f, new Color(240, 225, 215, 255), HanoiPalette.CartoonOutline, 1.5f);
+        FontManager.Instance.DrawText("[ESC] Thoát ra phố", new Vector2(btnExit.X + 46f, btnExit.Y + 11f), 12f, new Color(80, 50, 40, 255));
     }
 
     private void DrawHintMessage()
@@ -543,5 +863,8 @@ public sealed class StallPuzzleScene : IScene
     }
 
     public void Exit() { }
-    public void Dispose() { }
+    public void Dispose()
+    {
+        VectorRenderer.UnloadStallTextures();
+    }
 }

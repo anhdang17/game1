@@ -1,6 +1,6 @@
 ﻿{
   "saveVersion": "1.0.0",
-  "lastSavedTimestamp": "2026-11-09T09:15:21.694579+00:00",
+  "lastSavedTimestamp": "2026-11-10T06:57:50.005776+00:00",
   "playerProfile": {
     "playerName": "Bé Mây",
     "currentRegionId": "Hanoi",
@@ -8,11 +8,15 @@
   },
   "worldProgression": {
     "unlockedRegions": [
+      "Hanoi",
+      "Hue"
+    ],
+    "completedRegions": [
       "Hanoi"
     ],
-    "completedRegions": [],
     "regionColorRestoration": {
-      "Hanoi": 33.3
+      "Hanoi": 100,
+      "Hue": 0
     }
   },
   "level1State": {
@@ -32,17 +36,27 @@
       "Q2_Completed": true,
       "Q3_Started": false,
       "Q3_GridSolved": false,
-      "Q3_Completed": false,
-      "Gate_LongBien_Unlocked": false,
-      "GrayShadow_LetterRead": false,
-      "Level1_Finished": false
+      "Q3_Completed": true,
+      "Gate_LongBien_Unlocked": true,
+      "GrayShadow_LetterRead": true,
+      "Level1_Finished": true
     },
-    "inventoryItems": [],
+    "inventoryItems": [
+      "Item_BanhPho",
+      "Item_ThitBo",
+      "Item_NuocDung",
+      "Item_ThaoMoc",
+      "Item_HanhLa"
+    ],
     "puzzle3ObjectPositions": []
   },
   "collectionAlbum": {
-    "collectedJournalPages": [],
-    "collectedStamps": [],
+    "collectedJournalPages": [
+      "JournalPage_Hanoi_01"
+    ],
+    "collectedStamps": [
+      "Stamp_HoaSen_Hanoi"
+    ],
     "unlockedFactCards": []
   },
   "audioSettings": {

@@ -298,7 +298,7 @@ public sealed class LongBienGateInteractable : IInteractable, IYSortable
     public string DisplayName => "Cổng Cầu Long Biên";
     public Vector2 Position { get; set; } = new(1480f, 480f);
     public Vector2 InteractionCenter => Position + new Vector2(0, -20);
-    public float InteractionRadius => 64.0f;
+    public float InteractionRadius => 90.0f;
     public float VisualHeight => 60.0f;
 
     public string EntityId => Id;
