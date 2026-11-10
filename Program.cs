@@ -109,6 +109,7 @@ public static class Program
         saveLoadService.Save(saveData);
         sceneManager.Dispose();
         FontManager.Instance.Dispose();
+        VectorRenderer.UnloadStallTextures();
 
         if (Raylib.IsWindowReady())
         {

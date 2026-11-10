@@ -1053,6 +1053,7 @@ public sealed class HanoiExplorationScene : IScene
 
     public void Dispose()
     {
+        _stallPuzzleModal?.Dispose();
         BloomEffect.Dispose();
         VectorRenderer.UnloadStallTextures();
     }

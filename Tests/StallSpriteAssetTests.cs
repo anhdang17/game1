@@ -113,12 +113,120 @@ public class StallSpriteAssetTests
     {
         string p1 = Path.Combine("Data", filename);
         string p2 = Path.Combine("Source", "Data", filename);
-        if (File.Exists(p1) && File.Exists(p2))
+        Assert.True(File.Exists(p1), $"Asset {p1} does not exist!");
+        Assert.True(File.Exists(p2), $"Asset {p2} does not exist!");
+
+        byte[] b1 = File.ReadAllBytes(p1);
+        byte[] b2 = File.ReadAllBytes(p2);
+        Assert.Equal(b1.Length, b2.Length);
+        Assert.True(b1.SequenceEqual(b2), $"Assets {p1} and {p2} differ!");
+    }
+
+    [Theory]
+    [InlineData("stall_baan_pho.png")]
+    [InlineData("stall_bactu_beef.png")]
+    [InlineData("stall_colan_veggie.png")]
+    public void StallSprite_HasTransparentPerimeterAndOpaqueContent(string filename)
+    {
+        string path = VectorRenderer.ResolveTexturePath(filename);
+        var img = Raylib_cs.Raylib.LoadImage(path);
+        try
         {
-            byte[] b1 = File.ReadAllBytes(p1);
-            byte[] b2 = File.ReadAllBytes(p2);
-            Assert.Equal(b1.Length, b2.Length);
-            Assert.True(b1.SequenceEqual(b2), $"Assets {p1} and {p2} differ!");
+            Assert.True(img.Width > 0 && img.Height > 0);
+
+            var cTopLeft = Raylib_cs.Raylib.GetImageColor(img, 0, 0);
+            var cTopRight = Raylib_cs.Raylib.GetImageColor(img, img.Width - 1, 0);
+            var cBottomLeft = Raylib_cs.Raylib.GetImageColor(img, 0, img.Height - 1);
+            var cBottomRight = Raylib_cs.Raylib.GetImageColor(img, img.Width - 1, img.Height - 1);
+
+            Assert.Equal(0, cTopLeft.A);
+            Assert.Equal(0, cTopRight.A);
+            Assert.Equal(0, cBottomLeft.A);
+            Assert.Equal(0, cBottomRight.A);
+
+            var cCenter = Raylib_cs.Raylib.GetImageColor(img, img.Width / 2, img.Height / 2);
+            Assert.True(cCenter.A > 200, $"Center alpha is {cCenter.A}, expected > 200");
         }
+        finally
+        {
+            Raylib_cs.Raylib.UnloadImage(img);
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ResolveTexturePath_NullOrWhiteSpace_ReturnsEmptyString(string? input)
+    {
+        string result = VectorRenderer.ResolveTexturePath(input!);
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Theory]
+    [InlineData("stall_baan_pho.png")]
+    [InlineData("Data/stall_baan_pho.png")]
+    [InlineData("Sprites/stall_baan_pho.png")]
+    public void ResolveTexturePath_PrefixOrClean_ResolvesToExistingFile(string input)
+    {
+        string result = VectorRenderer.ResolveTexturePath(input);
+        Assert.False(string.IsNullOrEmpty(result));
+        Assert.True(File.Exists(result), $"Resolved path {result} does not exist for input {input}");
+    }
+
+    [Fact]
+    public void DrawStallSprite_HeadlessWithNonZeroId_ExecutesSafelyWithoutCrashing()
+    {
+        // When Raylib window is uninitialized, DrawStallSprite must return early without native calls
+        var fakeTex = new Raylib_cs.Texture2D { Id = 999, Width = 100, Height = 100 };
+        VectorRenderer.DrawStallSprite(fakeTex, new System.Numerics.Vector2(200f, 200f), 1.0f, true);
+        VectorRenderer.DrawStallSprite(fakeTex, new System.Numerics.Vector2(200f, 200f), 1.0f, false);
+    }
+
+    [Fact]
+    public void DrawStallSprite_InvalidDimensionsOrScale_ReturnsSafely()
+    {
+        var dummyTex = new Raylib_cs.Texture2D { Id = 1, Width = 0, Height = 0 };
+        VectorRenderer.DrawStallSprite(dummyTex, new System.Numerics.Vector2(200f, 200f), 0f, true);
+        VectorRenderer.DrawStallSprite(dummyTex, new System.Numerics.Vector2(200f, 200f), -1.0f, true);
+        VectorRenderer.DrawStallSprite(dummyTex, new System.Numerics.Vector2(200f, 200f), float.NaN, true);
+        VectorRenderer.DrawStallSprite(dummyTex, new System.Numerics.Vector2(200f, 200f), float.PositiveInfinity, true);
+        VectorRenderer.DrawStallSprite(dummyTex, new System.Numerics.Vector2(float.NaN, 200f), 1.0f, true);
+        VectorRenderer.DrawStallSprite(dummyTex, new System.Numerics.Vector2(200f, float.PositiveInfinity), 1.0f, true);
+    }
+
+    [Fact]
+    public void DrawMarketStall_WithShadowToggle_ExecutesSafelyHeadless()
+    {
+        var dummyPos = new System.Numerics.Vector2(100f, 100f);
+        VectorRenderer.DrawMarketStall(dummyPos, "Test", Raylib_cs.Color.Red, Raylib_cs.Color.Blue, 1.0f, withShadow: true);
+        VectorRenderer.DrawMarketStall(dummyPos, "Test", Raylib_cs.Color.Red, Raylib_cs.Color.Blue, 1.0f, withShadow: false);
+    }
+
+    [Fact]
+    public void DrawMarketStall_WithNaNOrInvalidDimensions_ReturnsSafely()
+    {
+        var dummyPos = new System.Numerics.Vector2(100f, 100f);
+        VectorRenderer.DrawMarketStall(dummyPos, "Test", Raylib_cs.Color.Red, Raylib_cs.Color.Blue, 0f, withShadow: true);
+        VectorRenderer.DrawMarketStall(dummyPos, "Test", Raylib_cs.Color.Red, Raylib_cs.Color.Blue, -1.0f, withShadow: true);
+        VectorRenderer.DrawMarketStall(dummyPos, "Test", Raylib_cs.Color.Red, Raylib_cs.Color.Blue, float.NaN, withShadow: true);
+        VectorRenderer.DrawMarketStall(dummyPos, "Test", Raylib_cs.Color.Red, Raylib_cs.Color.Blue, float.PositiveInfinity, withShadow: true);
+        VectorRenderer.DrawMarketStall(new System.Numerics.Vector2(float.NaN, 100f), "Test", Raylib_cs.Color.Red, Raylib_cs.Color.Blue, 1.0f, withShadow: true);
+        VectorRenderer.DrawMarketStall(new System.Numerics.Vector2(100f, float.NaN), "Test", Raylib_cs.Color.Red, Raylib_cs.Color.Blue, 1.0f, withShadow: true);
+    }
+
+    [Fact]
+    public void ResolveTexturePath_IllegalPathCharsOrNullByte_ReturnsEmptyStringWithoutThrowing()
+    {
+        string result = VectorRenderer.ResolveTexturePath("file\0name.png");
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
+    public void ResolveTexturePath_DirectExistingPath_ResolvesFullPathDirectly()
+    {
+        string directPath = Path.Combine("Data", "stall_baan_pho.png");
+        string resolved = VectorRenderer.ResolveTexturePath(directPath);
+        Assert.Equal(Path.GetFullPath(directPath), resolved);
     }
 }

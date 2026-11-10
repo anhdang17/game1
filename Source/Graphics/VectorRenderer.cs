@@ -432,31 +432,70 @@ public static class VectorRenderer
 
     public static string ResolveTexturePath(string filename)
     {
-        string[] candidates =
-        [
-            Path.Combine("Data", filename),
-            Path.Combine("Data", "Sprites", filename),
-            Path.Combine(AppContext.BaseDirectory, "Data", filename),
-            Path.Combine(AppContext.BaseDirectory, "Data", "Sprites", filename),
-            Path.Combine(AppContext.BaseDirectory, filename),
-            filename
-        ];
-        foreach (var c in candidates)
+        if (string.IsNullOrWhiteSpace(filename)) return string.Empty;
+
+        try
         {
-            if (File.Exists(c)) return c;
+            if (filename.IndexOfAny(Path.GetInvalidPathChars()) >= 0 || filename.Contains('\0'))
+            {
+                return string.Empty;
+            }
+
+            if (File.Exists(filename)) return Path.GetFullPath(filename);
+
+            string cleanName = Path.GetFileName(filename);
+            if (string.IsNullOrEmpty(cleanName) || cleanName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                return string.Empty;
+            }
+
+            string[] candidates =
+            [
+                Path.Combine("Data", cleanName),
+                Path.Combine("Data", "Sprites", cleanName),
+                Path.Combine("Source", "Data", cleanName),
+                Path.Combine("Source", "Data", "Sprites", cleanName),
+                Path.Combine(AppContext.BaseDirectory, "Data", cleanName),
+                Path.Combine(AppContext.BaseDirectory, "Data", "Sprites", cleanName),
+                Path.Combine(AppContext.BaseDirectory, cleanName),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Data", cleanName),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Source", "Data", cleanName),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Data", "Sprites", cleanName),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Data", cleanName),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Source", "Data", cleanName),
+                filename
+            ];
+            foreach (var c in candidates)
+            {
+                if (File.Exists(c)) return Path.GetFullPath(c);
+            }
+            return string.Empty;
         }
-        return Path.Combine("Data", filename);
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     private static Texture2D GetOrCreateStallTexture(ref Texture2D texture, ref bool loaded, string filename)
     {
         if (!loaded && Raylib.IsWindowReady())
         {
-            string path = ResolveTexturePath(filename);
-            if (File.Exists(path))
+            try
             {
-                texture = Raylib.LoadTexture(path);
-                Raylib.SetTextureFilter(texture, TextureFilter.Bilinear);
+                string path = ResolveTexturePath(filename);
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    texture = Raylib.LoadTexture(path);
+                    if (texture.Id > 0)
+                    {
+                        Raylib.SetTextureFilter(texture, TextureFilter.Bilinear);
+                    }
+                }
+            }
+            catch
+            {
+                // Fall back gracefully to procedural vector rendering if load throws
             }
             loaded = true;
         }
@@ -467,19 +506,28 @@ public static class VectorRenderer
     {
         if (_texBaAnPhoLoaded)
         {
-            if (_texBaAnPho.Id > 0 && Raylib.IsWindowReady()) Raylib.UnloadTexture(_texBaAnPho);
+            if (_texBaAnPho.Id > 0 && Raylib.IsWindowReady())
+            {
+                try { Raylib.UnloadTexture(_texBaAnPho); } catch { }
+            }
             _texBaAnPho = default;
             _texBaAnPhoLoaded = false;
         }
         if (_texBacTuBeefLoaded)
         {
-            if (_texBacTuBeef.Id > 0 && Raylib.IsWindowReady()) Raylib.UnloadTexture(_texBacTuBeef);
+            if (_texBacTuBeef.Id > 0 && Raylib.IsWindowReady())
+            {
+                try { Raylib.UnloadTexture(_texBacTuBeef); } catch { }
+            }
             _texBacTuBeef = default;
             _texBacTuBeefLoaded = false;
         }
         if (_texCoLanVeggieLoaded)
         {
-            if (_texCoLanVeggie.Id > 0 && Raylib.IsWindowReady()) Raylib.UnloadTexture(_texCoLanVeggie);
+            if (_texCoLanVeggie.Id > 0 && Raylib.IsWindowReady())
+            {
+                try { Raylib.UnloadTexture(_texCoLanVeggie); } catch { }
+            }
             _texCoLanVeggie = default;
             _texCoLanVeggieLoaded = false;
         }
@@ -487,7 +535,8 @@ public static class VectorRenderer
 
     public static void DrawStallSprite(Texture2D texture, Vector2 pos, float scale = 1.0f, bool withShadow = true)
     {
-        if (texture.Id == 0) return;
+        if (!Raylib.IsWindowReady() || texture.Id == 0 || texture.Width <= 0 || texture.Height <= 0 ||
+            scale <= 0f || !float.IsFinite(scale) || !float.IsFinite(pos.X) || !float.IsFinite(pos.Y)) return;
 
         // Ground shadow
         if (withShadow)
@@ -524,7 +573,7 @@ public static class VectorRenderer
         }
         else
         {
-            DrawMarketStall(pos, stallName, HanoiPalette.TerracottaRoof, HanoiPalette.WallYellow, scale);
+            DrawMarketStall(pos, stallName, HanoiPalette.TerracottaRoof, HanoiPalette.WallYellow, scale, withShadow);
         }
     }
 
@@ -548,7 +597,7 @@ public static class VectorRenderer
         }
         else
         {
-            DrawMarketStall(pos, stallName, HanoiPalette.ShutterGreen, HanoiPalette.WallYellowLight, scale);
+            DrawMarketStall(pos, stallName, HanoiPalette.ShutterGreen, HanoiPalette.WallYellowLight, scale, withShadow);
         }
     }
 
@@ -572,7 +621,7 @@ public static class VectorRenderer
         }
         else
         {
-            DrawMarketStall(pos, stallName, HanoiPalette.TerracottaRoof, HanoiPalette.WallYellowLight, scale);
+            DrawMarketStall(pos, stallName, HanoiPalette.TerracottaRoof, HanoiPalette.WallYellowLight, scale, withShadow);
         }
     }
 
@@ -665,9 +714,17 @@ public static class VectorRenderer
 
     public static void DrawMarketStall(Vector2 pos, string stallName, Color awning1, Color awning2, float scale = 1.0f)
     {
-        if (!Raylib.IsWindowReady()) return;
+        DrawMarketStall(pos, stallName, awning1, awning2, scale, true);
+    }
+
+    public static void DrawMarketStall(Vector2 pos, string stallName, Color awning1, Color awning2, float scale, bool withShadow)
+    {
+        if (!Raylib.IsWindowReady() || scale <= 0f || !float.IsFinite(scale) || !float.IsFinite(pos.X) || !float.IsFinite(pos.Y)) return;
         // Ground shadow
-        Raylib.DrawEllipse((int)pos.X, (int)pos.Y, 50f * scale, 14f * scale, Raylib.ColorAlpha(Color.Black, 0.26f));
+        if (withShadow)
+        {
+            Raylib.DrawEllipse((int)pos.X, (int)pos.Y, 50f * scale, 14f * scale, Raylib.ColorAlpha(Color.Black, 0.26f));
+        }
 
         // Wooden counter
         Rectangle counterRec = new(pos.X - 36f * scale, pos.Y - 32f * scale, 72f * scale, 30f * scale);
