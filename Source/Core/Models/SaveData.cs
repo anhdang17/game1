@@ -97,5 +97,10 @@ public sealed class SaveData
         Level1State.Sanitize();
         CollectionAlbum.Sanitize();
         AudioSettings.ClampVolumes();
+
+        if (Level1State.QuestFlags.Level1_Finished || Level1State.QuestFlags.Q3_Completed || WorldProgression.IsRegionCompleted(WorldProgression.RegionHanoi))
+        {
+            WorldProgression.UnlockRegion(WorldProgression.RegionHue);
+        }
     }
 }

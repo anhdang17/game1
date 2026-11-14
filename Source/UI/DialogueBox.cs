@@ -19,6 +19,9 @@ namespace GameProject.UI;
 public sealed class DialogueBox
 {
     public const float TypewriterSpeed = 38.0f; // characters per second
+    public const float StandardBoxWidth = 880f;
+    public const float StandardBoxHeight = 152f;
+    public const float ChoiceStep = 42f;
 
     private readonly IAudioService? _audioService;
     private DialogueNode? _currentNode;
@@ -163,10 +166,13 @@ public sealed class DialogueBox
             // Mouse hover & click detection on choices
             if (Raylib.IsWindowReady())
             {
+                float screenW = Raylib.IsWindowReady() ? Raylib.GetScreenWidth() : 1280f;
+                float screenH = Raylib.IsWindowReady() ? Raylib.GetScreenHeight() : 720f;
                 float boxW = 880f;
-                float boxX = (1280f - boxW) * 0.5f;
-                float boxY = 550f;
-                float choiceStartY = boxY - (_currentBranches.Count * 44f) - 10f;
+                float boxH = 152f;
+                float boxX = (screenW - boxW) * 0.5f;
+                float boxY = screenH - boxH - 28f;
+                float choiceStartY = boxY - (_currentBranches.Count * 42f) - 10f;
 
                 for (int i = 0; i < _currentBranches.Count; i++)
                 {
@@ -266,15 +272,17 @@ public sealed class DialogueBox
     {
         if (!IsActive || !Raylib.IsWindowReady()) return;
 
+        float screenW = Raylib.IsWindowReady() ? Raylib.GetScreenWidth() : 1280f;
+        float screenH = Raylib.IsWindowReady() ? Raylib.GetScreenHeight() : 720f;
         float boxW = 880f;
-        float boxH = 140f;
-        float boxX = (1280f - boxW) * 0.5f;
-        float boxY = 550f;
+        float boxH = 152f;
+        float boxX = (screenW - boxW) * 0.5f;
+        float boxY = screenH - boxH - 28f;
 
         // 1. Draw Choices above box if present and text complete
         if (_currentBranches.Count > 0 && IsTypingComplete)
         {
-            float choiceStartY = boxY - (_currentBranches.Count * 44f) - 10f;
+            float choiceStartY = boxY - (_currentBranches.Count * 42f) - 10f;
             for (int i = 0; i < _currentBranches.Count; i++)
             {
                 bool isSelected = (i == SelectedChoiceIndex);

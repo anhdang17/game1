@@ -44,21 +44,21 @@ public sealed class WorldMapScene : IScene
     public string? FeedbackMessage => _feedbackMsg;
 
     // Pin anchor coordinates across 1280x720 canvas
-    private static readonly Dictionary<string, Vector2> PinPositions = new()
+    public static readonly Dictionary<string, Vector2> PinPositions = new()
     {
         // 7 World Wonders
-        { "Hanoi",       new Vector2(490f, 255f) },
-        { "Kyoto",       new Vector2(670f, 215f) },
-        { "Cairo",       new Vector2(340f, 320f) },
-        { "Paris",       new Vector2(245f, 190f) },
-        { "Rio",         new Vector2(185f, 480f) },
-        { "BacCuc",      new Vector2(440f, 95f)  },
-        { "BauTroiKyUc", new Vector2(645f, 440f) },
+        { "Hanoi",       new Vector2(485f, 235f) },
+        { "Kyoto",       new Vector2(670f, 205f) },
+        { "Cairo",       new Vector2(330f, 310f) },
+        { "Paris",       new Vector2(235f, 185f) },
+        { "Rio",         new Vector2(165f, 410f) }, // Shifted NW; clears Legend Box by ~50px
+        { "BacCuc",      new Vector2(440f, 115f) }, // Shifted down; clears info text by ~25px
+        { "BauTroiKyUc", new Vector2(655f, 440f) },
 
-        // Legacy Vietnamese regions for backward compatibility
-        { "Hue",         new Vector2(520f, 325f) },
-        { "HoiAn",       new Vector2(545f, 365f) },
-        { "SaiGon",      new Vector2(510f, 420f) },
+        // Legacy Vietnamese regions with authentic S-curve and non-overlapping spacing
+        { "Hue",         new Vector2(505f, 310f) },
+        { "HoiAn",       new Vector2(565f, 385f) }, // Distance to Hue = 96px > 64px; zero collision
+        { "SaiGon",      new Vector2(495f, 460f) }, // Distance to HoiAn = 103px > 64px
     };
 
     public WorldMapScene(SaveData saveData, IEventBus? eventBus = null, IInputService? inputService = null)
@@ -140,6 +140,13 @@ public sealed class WorldMapScene : IScene
 
         if (Raylib.IsWindowReady())
         {
+            // Back navigation via Escape key
+            if (Raylib.IsKeyPressed(KeyboardKey.Escape))
+            {
+                RequestTravelTo = "Hanoi";
+                return;
+            }
+
             // Arrow key / W / S navigation
             if (Raylib.IsKeyPressed(KeyboardKey.Down) || Raylib.IsKeyPressed(KeyboardKey.S)) NavigateNext();
             if (Raylib.IsKeyPressed(KeyboardKey.Up) || Raylib.IsKeyPressed(KeyboardKey.W))   NavigatePrev();
@@ -190,14 +197,28 @@ public sealed class WorldMapScene : IScene
             {
                 OpenAlbum();
             }
+
+            // Click on Back button
+            Rectangle backBtn = new(30f, 20f, 130f, 36f);
+            if (Raylib.IsMouseButtonPressed(MouseButton.Left) && Raylib.CheckCollisionPointRec(mouse, backBtn))
+            {
+                RequestTravelTo = "Hanoi";
+                return;
+            }
         }
     }
 
-    private string? GetPinAtMouse(Vector2 mouse)
+    public string? GetPinAtMouse(Vector2 mouse)
     {
         foreach (var (id, pos) in PinPositions)
         {
-            if (Vector2.Distance(mouse, pos) <= 32f)
+            if (Vector2.Distance(mouse, pos) <= 28f)
+                return id;
+
+            string name = GetDisplayName(id);
+            Vector2 sz = FontManager.Instance.MeasureText(name, 11f);
+            Rectangle nameBg = new(pos.X - sz.X / 2f - 9f, pos.Y + 18f, sz.X + 18f, 26f);
+            if (Raylib.CheckCollisionPointRec(mouse, nameBg))
                 return id;
         }
         return null;
@@ -329,13 +350,13 @@ public sealed class WorldMapScene : IScene
         Color landBorder = new(155, 125, 90, 190);
 
         // Europe / Paris landmass
-        VectorRenderer.DrawRoundedRect(new Rectangle(200f, 150f, 110f, 90f), 0.4f, landWash, landBorder, 1.2f, withShadow: false);
+        VectorRenderer.DrawRoundedRect(new Rectangle(190f, 145f, 110f, 90f), 0.4f, landWash, landBorder, 1.2f, withShadow: false);
         // Egypt / Cairo landmass
-        VectorRenderer.DrawRoundedRect(new Rectangle(295f, 275f, 100f, 105f), 0.35f, landWash, landBorder, 1.2f, withShadow: false);
+        VectorRenderer.DrawRoundedRect(new Rectangle(285f, 265f, 100f, 105f), 0.35f, landWash, landBorder, 1.2f, withShadow: false);
         // South America / Rio landmass
-        VectorRenderer.DrawRoundedRect(new Rectangle(145f, 430f, 95f, 120f), 0.45f, landWash, landBorder, 1.2f, withShadow: false);
+        VectorRenderer.DrawRoundedRect(new Rectangle(125f, 360f, 95f, 110f), 0.45f, landWash, landBorder, 1.2f, withShadow: false);
         // Arctic ice shelf (North)
-        VectorRenderer.DrawRoundedRect(new Rectangle(360f, 65f, 170f, 65f), 0.5f, new Color(230, 238, 245, 230), new Color(130, 160, 190, 180), 1.2f, withShadow: false);
+        VectorRenderer.DrawRoundedRect(new Rectangle(360f, 85f, 170f, 65f), 0.5f, new Color(230, 238, 245, 230), new Color(130, 160, 190, 180), 1.2f, withShadow: false);
         // Japan / Kyoto island arc
         VectorRenderer.DrawRoundedRect(new Rectangle(645f, 175f, 65f, 95f), 0.5f, landWash, landBorder, 1.2f, withShadow: false);
         // Mythical Sky Realm / Bầu Trời Ký Ức floating cloud land
@@ -347,11 +368,11 @@ public sealed class WorldMapScene : IScene
         Color vnBorder = new(100, 125, 80, 240);
 
         // Northern (Hanoi)
-        VectorRenderer.DrawRoundedRect(new Rectangle(450f, 210f, 90f, 80f), 0.38f, vnLand, vnBorder, 1.3f, withShadow: false);
+        VectorRenderer.DrawRoundedRect(new Rectangle(445f, 190f, 90f, 85f), 0.38f, vnLand, vnBorder, 1.3f, withShadow: false);
         // Central (Hue, HoiAn)
-        VectorRenderer.DrawRoundedRect(new Rectangle(495f, 290f, 75f, 95f), 0.32f, vnLand, vnBorder, 1.3f, withShadow: false);
+        VectorRenderer.DrawRoundedRect(new Rectangle(485f, 280f, 105f, 120f), 0.32f, vnLand, vnBorder, 1.3f, withShadow: false);
         // Southern (SaiGon)
-        VectorRenderer.DrawRoundedRect(new Rectangle(475f, 385f, 85f, 75f), 0.4f, vnLand, vnBorder, 1.3f, withShadow: false);
+        VectorRenderer.DrawRoundedRect(new Rectangle(460f, 420f, 85f, 75f), 0.4f, vnLand, vnBorder, 1.3f, withShadow: false);
 
         // Biển Đông & gentle ocean waves
         Color seaText = new(110, 140, 160, 210);
@@ -370,14 +391,14 @@ public sealed class WorldMapScene : IScene
         Color seaColor = new(115, 145, 165, 210);
 
         // Hoàng Sa
-        Vector2 hoangSa = new(595f, 275f);
+        Vector2 hoangSa = new(615f, 285f);
         Raylib.DrawCircleV(hoangSa, 5f, islandColor);
         Raylib.DrawCircleLines((int)hoangSa.X, (int)hoangSa.Y, 5f, HanoiPalette.CartoonOutline);
         Raylib.DrawCircleV(hoangSa + new Vector2(8f, 5f), 3.5f, islandColor);
         FontManager.Instance.DrawText("Q.Đ Hoàng Sa", hoangSa + new Vector2(14f, -5f), 10f, seaColor);
 
         // Trường Sa
-        Vector2 truongSa = new(590f, 375f);
+        Vector2 truongSa = new(620f, 400f);
         Raylib.DrawCircleV(truongSa, 5f, islandColor);
         Raylib.DrawCircleLines((int)truongSa.X, (int)truongSa.Y, 5f, HanoiPalette.CartoonOutline);
         Raylib.DrawCircleV(truongSa + new Vector2(-6f, 8f), 3.5f, islandColor);
@@ -562,14 +583,19 @@ public sealed class WorldMapScene : IScene
 
     private void DrawTitle()
     {
+        // Top-left Back button
+        Rectangle backBtn = new(30f, 20f, 130f, 36f);
+        VectorRenderer.DrawRoundedRect(backBtn, 0.35f, new Color(245, 240, 230, 240), new Color(145, 115, 80, 240), 1.5f, withShadow: false);
+        FontManager.Instance.DrawText("[Esc] Trở về", new Vector2(backBtn.X + 22f, backBtn.Y + 11f), 13f, new Color(75, 55, 35, 255));
+
         string title = "Hải Đồ Du Ký 7 Kỳ Quan Thế Giới";
         Vector2 sz = FontManager.Instance.MeasureText(title, 28f);
-        FontManager.Instance.DrawTextOutline(title, new Vector2(440f - sz.X / 2f, 18f), 28f,
+        FontManager.Instance.DrawTextOutline(title, new Vector2(440f - sz.X / 2f, 14f), 28f,
             new Color(255, 225, 75, 255), new Color(90, 60, 30, 255), 2.5f);
 
         string sub = "Sử dụng [W/S / Mũi tên] hoặc chuột để chọn kỳ quan  ·  [Enter] Du hành  ·  [Tab] Sổ Ký Ức";
         Vector2 subSz = FontManager.Instance.MeasureText(sub, 12f);
-        FontManager.Instance.DrawText(sub, new Vector2(440f - subSz.X / 2f, 52f), 12f, new Color(75, 55, 35, 220));
+        FontManager.Instance.DrawText(sub, new Vector2(440f - subSz.X / 2f, 44f), 12f, new Color(75, 55, 35, 220));
     }
 
     private void DrawPreviewCard()
@@ -595,17 +621,27 @@ public sealed class WorldMapScene : IScene
         VectorRenderer.DrawRoundedRect(banner, 0.2f, banCol, new Color(135, 105, 75, 255), 1.5f, withShadow: false);
 
         string regName = activeNode.DisplayName;
-        FontManager.Instance.DrawTextOutline(regName, new Vector2(banner.X + 16f, banner.Y + 14f), 20f,
-            isUnlocked ? new Color(50, 40, 30, 255) : new Color(110, 105, 100, 255), Color.White, 1.0f);
 
         // Status Badge Pill
         string statusText = isCompleted ? "HOÀN THÀNH" : (isUnlocked ? "ĐANG KHÁM PHÁ" : "CHƯA MỞ KHÓA");
         Color statBg = isCompleted ? new Color(245, 185, 30, 240) :
                        isUnlocked ? new Color(60, 165, 85, 240) : new Color(150, 145, 140, 240);
         Vector2 stSz = FontManager.Instance.MeasureText(statusText, 11f);
-        Rectangle stPill = new(banner.X + banner.Width - stSz.X - 24f, banner.Y + 14f, stSz.X + 16f, 26f);
+        Rectangle stPill = new(banner.X + banner.Width - stSz.X - 20f, banner.Y + 14f, stSz.X + 16f, 26f);
         VectorRenderer.DrawRoundedRect(stPill, 0.4f, statBg, Color.White, 0f, withShadow: false);
         FontManager.Instance.DrawText(statusText, new Vector2(stPill.X + 8f, stPill.Y + 6f), 11f, Color.White);
+
+        // Responsive Title formatting (scales font size down if title approaches status pill)
+        float maxTitleWidth = stPill.X - (banner.X + 16f) - 8f;
+        float titleFontSize = 19f;
+        Vector2 titleSz = FontManager.Instance.MeasureText(regName, titleFontSize);
+        if (titleSz.X > maxTitleWidth)
+        {
+            titleFontSize = 15f;
+            titleSz = FontManager.Instance.MeasureText(regName, titleFontSize);
+        }
+        FontManager.Instance.DrawTextOutline(regName, new Vector2(banner.X + 16f, banner.Y + (banner.Height - titleSz.Y) * 0.5f), titleFontSize,
+            isUnlocked ? new Color(50, 40, 30, 255) : new Color(110, 105, 100, 255), Color.White, 1.0f);
 
         // Lore Description
         float descY = card.Y + 85f;
@@ -720,8 +756,9 @@ public sealed class WorldMapScene : IScene
         if (string.IsNullOrEmpty(_feedbackMsg) || _feedbackTimer <= 0f) return;
         float alpha = Math.Clamp(_feedbackTimer, 0f, 1f);
         Vector2 sz = FontManager.Instance.MeasureText(_feedbackMsg, 14f);
-        float bw = Math.Min(sz.X + 36f, 800f);
-        Rectangle box = new(440f - bw / 2f, 668f, bw, 36f);
+        float bw = Math.Min(sz.X + 36f, 500f);
+        // Separate feedback toast from Album button (which occupies X: 30-230, Y: 630-674)
+        Rectangle box = new(Math.Max(240f, 440f - bw / 2f), 668f, bw, 36f);
         VectorRenderer.DrawRoundedRect(box, 0.35f,
             Raylib.ColorAlpha(new Color(45, 85, 145, 255), alpha * 0.94f),
             Color.White, 1.5f, withShadow: false);
@@ -735,7 +772,7 @@ public sealed class WorldMapScene : IScene
         int stampsCount = _saveData.CollectionAlbum.CollectedStamps.Count;
         string info = $"Sổ Ký Ức: {pagesCount}/2 Trang  ·  Tem: {stampsCount}/4 Tem";
         Vector2 infoSz = FontManager.Instance.MeasureText(info, 12f);
-        FontManager.Instance.DrawText(info, new Vector2(440f - infoSz.X / 2f, 78f), 12f,
+        FontManager.Instance.DrawText(info, new Vector2(440f - infoSz.X / 2f, 66f), 12f,
             new Color(75, 55, 40, 210));
     }
 

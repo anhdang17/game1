@@ -161,11 +161,12 @@ public sealed class HanoiExplorationScene : IScene
             Friction = 1200.0f
         };
 
-        // 3. Setup Camera Tracker
+        // 3. Setup Camera Tracker (Zoom scaled down to 0.85f for broader, well-proportioned view)
         CameraTracker = new Camera2DTracker
         {
             ViewportSize = new Vector2(1280, 720),
-            MapBounds = CollisionWorld.MapBounds
+            MapBounds = CollisionWorld.MapBounds,
+            Zoom = 0.85f
         };
         CameraTracker.SnapToTarget(Kinematics.Position);
 
@@ -459,6 +460,12 @@ public sealed class HanoiExplorationScene : IScene
         }
 
         Kinematics.Update(InputService.MovementDirection, CollisionWorld, deltaTime);
+
+        // Spatial exit zone at opened Long Bien Bridge gate
+        if (QuestFlags.Gate_LongBien_Unlocked && Kinematics.Position.X >= 1520f)
+        {
+            RequestWorldMap = true;
+        }
 
         Vector2 playerPos = Kinematics.Position;
         if (Kinematics.IsDashing)

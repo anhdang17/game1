@@ -267,9 +267,9 @@ public sealed class StallPuzzleScene : IScene
         Vector2 mouse = Raylib.GetMousePosition();
 
         // 1. UI Buttons in sidebar (Reset, Hint, Exit)
-        Rectangle btnReset = new(1050f, 490f, 92f, 36f);
-        Rectangle btnHint = new(1154f, 490f, 92f, 36f);
-        Rectangle btnExit = new(1050f, 536f, 196f, 36f);
+        Rectangle btnReset = new(1050f, 485f, 92f, 36f);
+        Rectangle btnHint = new(1154f, 485f, 92f, 36f);
+        Rectangle btnExit = new(1050f, 530f, 196f, 36f);
 
         if (Raylib.IsMouseButtonPressed(MouseButton.Left))
         {
@@ -303,10 +303,10 @@ public sealed class StallPuzzleScene : IScene
                 float h = selEntity.Height * CellSize;
                 float cx = x + w / 2f, cy = y + h / 2f;
 
-                Rectangle upArrowRec = new(cx - 20f, cy - h / 2f - 32f, 40f, 28f);
-                Rectangle downArrowRec = new(cx - 20f, cy + h / 2f + 4f, 40f, 28f);
-                Rectangle leftArrowRec = new(cx - w / 2f - 32f, cy - 20f, 28f, 40f);
-                Rectangle rightArrowRec = new(cx + w / 2f + 4f, cy - 20f, 28f, 40f);
+                Rectangle upArrowRec = new(cx - 18f, cy - h / 2f - 30f, 36f, 26f);
+                Rectangle downArrowRec = new(cx - 18f, cy + h / 2f + 4f, 36f, 26f);
+                Rectangle leftArrowRec = new(cx - w / 2f - 30f, cy - 18f, 26f, 36f);
+                Rectangle rightArrowRec = new(cx + w / 2f + 4f, cy - 18f, 26f, 36f);
 
                 if (Raylib.IsMouseButtonPressed(MouseButton.Left))
                 {

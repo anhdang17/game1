@@ -202,7 +202,7 @@ public sealed class PhoAssemblyScene : IScene
         if (Raylib.IsMouseButtonPressed(MouseButton.Left))
         {
             // Check button clicks
-            Rectangle btnValidate = new(520f, 490f, 240f, 44f);
+            Rectangle btnValidate = new(520f, 490f, 240f, 46f);
             if (Raylib.CheckCollisionPointRec(mouse, btnValidate))
             {
                 TryValidate();

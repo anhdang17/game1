@@ -23,9 +23,12 @@ public sealed class QuestHUD
         public float Alpha { get; set; } = 1.0f;
     }
 
-    public Rectangle Bounds { get; private set; } = new(20f, 20f, 265f, 82f);
+    public Rectangle Bounds { get; private set; } = new(20f, 20f, 290f, 82f);
     private readonly List<ToastMessage> _toasts = new();
     public IReadOnlyList<ToastMessage> ActiveToasts => _toasts;
+
+    public string CurrentQuestTitle { get; private set; } = "Nấu Phở Hà Nội";
+    public string CurrentObjectiveText { get; private set; } = "";
 
     private float _pulseTimer;
 
@@ -55,9 +58,40 @@ public sealed class QuestHUD
         return $"Thu thập nguyên liệu phở: ({collectedCount}/{totalCount})";
     }
 
+    public static (string Title, string StatusText) GetQuestDisplayInfo(QuestFlags flags)
+    {
+        if (flags == null) return ("Nấu Phở Hà Nội", "");
+
+        if (!flags.Q1_Completed)
+        {
+            string title = "Nấu Phở Hà Nội";
+            if (flags.AreAllQ1IngredientsCollected())
+                return (title, "Mang nguyên liệu về cho Bà An!");
+            return (title, FormatObjectiveProgress(flags.GetQ1CollectedCount(), 5));
+        }
+
+        if (!flags.Q2_Completed)
+        {
+            string title = "Ghép đúng Bát Phở hoàn chỉnh";
+            if (flags.Q2_PhoAssembled)
+                return (title, "Bát phở đã hoàn thành!");
+            return (title, "Tương tác với Bà An để ghép phở");
+        }
+
+        string q3Title = "Mở lối ra Cầu Long Biên";
+        if (flags.Q3_Completed || flags.Gate_LongBien_Unlocked)
+            return (q3Title, "Cổng Cầu Long Biên đã mở!");
+        if (flags.Q3_GridSolved)
+            return (q3Title, "Gian hàng đã dọn, sẵn sàng qua cổng!");
+        return (q3Title, "Sắp xếp gian hàng dọn lối đi");
+    }
+
     public void Update(float deltaTime, QuestManager questManager, QuestFlags flags)
     {
         _pulseTimer += deltaTime;
+        var info = GetQuestDisplayInfo(flags);
+        CurrentQuestTitle = info.Title;
+        CurrentObjectiveText = info.StatusText;
 
         // Update toasts
         for (int i = _toasts.Count - 1; i >= 0; i--)
@@ -78,6 +112,10 @@ public sealed class QuestHUD
     public void Draw(QuestFlags flags, int screenWidth = 1280)
     {
         if (!Raylib.IsWindowReady()) return;
+
+        var (title, statusDesc) = GetQuestDisplayInfo(flags);
+        CurrentQuestTitle = title;
+        CurrentObjectiveText = statusDesc;
 
         // 1. Draw Quest Tracker Card — Rustic Bamboo Pole Styling
         VectorRenderer.DrawDropShadow(Bounds, 0.25f, offsetY: 3f, alpha: 0.25f);
@@ -112,38 +150,65 @@ public sealed class QuestHUD
         FontManager.Instance.DrawText("NHIỆM VỤ HIỆN TẠI", new Vector2(Bounds.X + 16f, Bounds.Y + 8f), 10f, new Color(140, 109, 80, 255));
 
         // Quest title
-        FontManager.Instance.DrawText("Nấu Phở Hà Nội", new Vector2(Bounds.X + 16f, Bounds.Y + 22f), 15f, new Color(45, 35, 30, 255));
+        FontManager.Instance.DrawText(title, new Vector2(Bounds.X + 16f, Bounds.Y + 22f), 15f, new Color(45, 35, 30, 255));
 
         // Objective status
-        int count = flags.GetQ1CollectedCount();
-        if (flags.Q1_Completed)
+        if (!flags.Q1_Completed)
         {
-            VectorRenderer.DrawCheckmark(new Vector2(Bounds.X + 22f, Bounds.Y + 50f), 10f, new Color(46, 133, 64, 255));
-            FontManager.Instance.DrawText("Đã gom đủ 5 nguyên liệu!", new Vector2(Bounds.X + 32f, Bounds.Y + 44f), 12f, new Color(46, 133, 64, 255));
+            int count = flags.GetQ1CollectedCount();
+            if (flags.AreAllQ1IngredientsCollected())
+            {
+                float pulse = 0.7f + MathF.Sin(_pulseTimer * 6f) * 0.3f;
+                Color alertColor = Raylib.ColorAlpha(new Color(192, 86, 33, 255), pulse);
+                VectorRenderer.DrawFivePointStar(new Vector2(Bounds.X + 22f, Bounds.Y + 50f), 6f, alertColor);
+                FontManager.Instance.DrawText(statusDesc, new Vector2(Bounds.X + 32f, Bounds.Y + 44f), 12f, alertColor);
+            }
+            else
+            {
+                FontManager.Instance.DrawText(statusDesc, new Vector2(Bounds.X + 16f, Bounds.Y + 42f), 12f, new Color(60, 50, 45, 255));
+
+                // Progress Bar
+                float barW = Bounds.Width - 40f;
+                float barH = 6f;
+                Rectangle barBg = new(Bounds.X + 16f, Bounds.Y + 62f, barW, barH);
+                Raylib.DrawRectangleRounded(barBg, 0.5f, 4, new Color(220, 214, 201, 255));
+
+                float fillW = barW * (count / 5.0f);
+                if (fillW > 0f)
+                {
+                    Rectangle barFill = new(Bounds.X + 16f, Bounds.Y + 62f, fillW, barH);
+                    Raylib.DrawRectangleRounded(barFill, 0.5f, 4, new Color(56, 161, 105, 255));
+                }
+            }
         }
-        else if (flags.AreAllQ1IngredientsCollected())
+        else if (!flags.Q2_Completed)
         {
-            float pulse = 0.7f + MathF.Sin(_pulseTimer * 6f) * 0.3f;
-            Color alertColor = Raylib.ColorAlpha(new Color(192, 86, 33, 255), pulse);
-            VectorRenderer.DrawFivePointStar(new Vector2(Bounds.X + 22f, Bounds.Y + 50f), 6f, alertColor);
-            FontManager.Instance.DrawText("Mang nguyên liệu về cho Bà An!", new Vector2(Bounds.X + 32f, Bounds.Y + 44f), 12f, alertColor);
+            if (flags.Q2_PhoAssembled)
+            {
+                VectorRenderer.DrawCheckmark(new Vector2(Bounds.X + 22f, Bounds.Y + 50f), 10f, new Color(46, 133, 64, 255));
+                FontManager.Instance.DrawText(statusDesc, new Vector2(Bounds.X + 34f, Bounds.Y + 44f), 12f, new Color(46, 133, 64, 255));
+            }
+            else
+            {
+                float pulse = 0.7f + MathF.Sin(_pulseTimer * 5f) * 0.3f;
+                Color alertColor = Raylib.ColorAlpha(new Color(192, 86, 33, 255), pulse);
+                VectorRenderer.DrawFivePointStar(new Vector2(Bounds.X + 22f, Bounds.Y + 50f), 6f, alertColor);
+                FontManager.Instance.DrawText(statusDesc, new Vector2(Bounds.X + 34f, Bounds.Y + 44f), 12f, alertColor);
+            }
         }
         else
         {
-            string objText = FormatObjectiveProgress(count, 5);
-            FontManager.Instance.DrawText(objText, new Vector2(Bounds.X + 16f, Bounds.Y + 42f), 12f, new Color(60, 50, 45, 255));
-
-            // Progress Bar
-            float barW = 225f;
-            float barH = 6f;
-            Rectangle barBg = new(Bounds.X + 16f, Bounds.Y + 62f, barW, barH);
-            Raylib.DrawRectangleRounded(barBg, 0.5f, 4, new Color(220, 214, 201, 255));
-
-            float fillW = barW * (count / 5.0f);
-            if (fillW > 0f)
+            if (flags.Q3_Completed || flags.Gate_LongBien_Unlocked)
             {
-                Rectangle barFill = new(Bounds.X + 16f, Bounds.Y + 62f, fillW, barH);
-                Raylib.DrawRectangleRounded(barFill, 0.5f, 4, new Color(56, 161, 105, 255));
+                VectorRenderer.DrawCheckmark(new Vector2(Bounds.X + 22f, Bounds.Y + 50f), 10f, new Color(46, 133, 64, 255));
+                FontManager.Instance.DrawText(statusDesc, new Vector2(Bounds.X + 34f, Bounds.Y + 44f), 12f, new Color(46, 133, 64, 255));
+            }
+            else
+            {
+                float pulse = 0.7f + MathF.Sin(_pulseTimer * 5f) * 0.3f;
+                Color alertColor = Raylib.ColorAlpha(new Color(192, 86, 33, 255), pulse);
+                VectorRenderer.DrawFivePointStar(new Vector2(Bounds.X + 22f, Bounds.Y + 50f), 6f, alertColor);
+                FontManager.Instance.DrawText(statusDesc, new Vector2(Bounds.X + 34f, Bounds.Y + 44f), 12f, alertColor);
             }
         }
 

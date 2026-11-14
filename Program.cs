@@ -85,10 +85,20 @@ public static class Program
                 {
                     sceneManager.SwitchScene(new HanoiExplorationScene(saveData, audioService: audioService, inputService: inputService, eventBus: eventBus));
                 }
+                else if (wm.RequestTravelTo == "Hue")
+                {
+                    sceneManager.SwitchScene(new HueExplorationScene(saveData, audioService: audioService, inputService: inputService, eventBus: eventBus));
+                }
                 else if (wm.RequestAlbum)
                 {
                     sceneManager.SwitchScene(new AlbumViewerScene(saveData, eventBus, inputService));
                 }
+            }
+            else if (sceneManager.CurrentScene is HueExplorationScene hue && hue.RequestWorldMap)
+            {
+                hue.RequestWorldMap = false;
+                saveLoadService.Save(saveData);
+                sceneManager.SwitchScene(new WorldMapScene(saveData, eventBus, inputService));
             }
             else if (sceneManager.CurrentScene is AlbumViewerScene album && album.RequestClose)
             {

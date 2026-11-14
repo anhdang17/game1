@@ -88,8 +88,14 @@ public sealed class WorldProgression
         }
     };
 
-    public bool IsRegionUnlocked(string regionId) =>
-        UnlockedRegions.Contains(regionId, StringComparer.OrdinalIgnoreCase);
+    public bool IsRegionUnlocked(string regionId)
+    {
+        if (string.Equals(regionId, RegionHue, StringComparison.OrdinalIgnoreCase) && IsRegionCompleted(RegionHanoi))
+        {
+            return true;
+        }
+        return UnlockedRegions.Contains(regionId, StringComparer.OrdinalIgnoreCase);
+    }
 
     public bool IsRegionCompleted(string regionId) =>
         CompletedRegions.Contains(regionId, StringComparer.OrdinalIgnoreCase);
@@ -112,7 +118,7 @@ public sealed class WorldProgression
     public bool UnlockRegion(string regionId)
     {
         if (string.IsNullOrWhiteSpace(regionId)) return false;
-        if (!IsRegionUnlocked(regionId))
+        if (!UnlockedRegions.Contains(regionId, StringComparer.OrdinalIgnoreCase))
         {
             UnlockedRegions.Add(regionId);
             if (!RegionColorRestoration.ContainsKey(regionId))
@@ -149,6 +155,11 @@ public sealed class WorldProgression
 
         CompletedRegions ??= new List<string>();
         CompletedRegions.RemoveAll(string.IsNullOrWhiteSpace);
+
+        if (IsRegionCompleted(RegionHanoi))
+        {
+            UnlockRegion(RegionHue);
+        }
 
         RegionColorRestoration ??= new Dictionary<string, float>();
 

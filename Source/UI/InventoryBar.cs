@@ -29,6 +29,7 @@ public sealed class InventoryBar
     public Rectangle Bounds { get; private set; }
 
     private int _hoveredIndex = -1;
+    private int _lastScreenWidth = 1280;
 
     public InventoryBar(IEventBus eventBus)
     {
@@ -57,16 +58,17 @@ public sealed class InventoryBar
 
     public void Update(float deltaTime, Inventory inventory, Vector2 pointerPos, int screenWidth = 1280)
     {
+        _lastScreenWidth = screenWidth;
         float totalWidth = 310f;
-        float totalHeight = 58f;
+        float totalHeight = 62f;
         float startX = (screenWidth - totalWidth) * 0.5f;
         float startY = 16f;
         Bounds = new Rectangle(startX, startY, totalWidth, totalHeight);
 
         float slotSize = 44f;
         float spacing = 12f;
-        float initialX = startX + 17f;
-        float slotY = startY + 7f;
+        float initialX = startX + 21f;
+        float slotY = startY + 9f;
 
         _hoveredIndex = -1;
 
@@ -182,7 +184,7 @@ public sealed class InventoryBar
             float tipW = MathF.Max(sz1.X, sz2.X) + 16f;
             float tipH = sz1.Y + sz2.Y + 14f;
 
-            float tipX = Math.Clamp(slot.Bounds.X + (slot.Bounds.Width - tipW) * 0.5f, 10f, 1280f - tipW - 10f);
+            float tipX = Math.Clamp(slot.Bounds.X + (slot.Bounds.Width - tipW) * 0.5f, 10f, _lastScreenWidth - tipW - 10f);
             float tipY = Bounds.Y + Bounds.Height + 6f;
 
             Rectangle tipRec = new(tipX, tipY, tipW, tipH);

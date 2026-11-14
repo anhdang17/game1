@@ -1,87 +1,58 @@
-# Project: Du Ký Bé Mây Visual & Gameplay Revamp
+# Project: Du Ký Bé Mây - Realm Progression, UI Polish & Map Sizing
 
 ## Architecture
-- Presentation Layer: Pure Raylib procedural vector graphics (`VectorRenderer.cs`, `HanoiPalette.cs`, `ParticleEmitter.cs`). Zero external sprite/image dependencies.
-- Movement & Physics: `CharacterKinematics.cs` with smooth deceleration, Cloud Glide, and Dash activation via Space/Shift keys.
-- Exploration Stage: `HanoiExplorationScene.cs` with organic cobblestone pavement, moss, puddles, lanterns with warm radial glow, Long Bien bridge, and Bà An steaming pho stall (grid lines removed).
-- Minigames Stage: `PhoAssemblyScene.cs` (bouncy drop animation, broth steam, confetti celebration) and `StallPuzzleScene.cs` (smooth lerp sliding, golden BFS path ribbon). Core puzzle engines (`PhoCookingEngine.cs`, `SpatialGridEngine.cs`) are 100% decoupled and preserved.
-- World Progression: `WorldProgression.cs` & `WorldMapService.cs` with dual-contract architecture (retaining 4 legacy nodes for backward-compatible `GetRegionNodes()` and 7 Wonder nodes for `GetWorldWonderNodes()`). `WorldMapScene.cs` with vintage parchment sea chart diorama.
-- Storybook UI: `DialogueBox.cs` (handmade dó paper with gold trim), `QuestHUD.cs` & `InventoryBar.cs` (rustic bamboo & rattan styling).
+- Scene Coordination & Progression: `Program.cs`, `WorldProgression.cs`, `SaveData.cs`, `HueExplorationScene.cs`. Handles progression unlock after Hanoi completion, safe desync reconciliation, and scene switching to Hue / Central Realm.
+- World Map Navigation & Visuals: `WorldMapScene.cs`. Vintage parchment diorama with non-overlapping pin layout (>=64px pairwise spacing), composite hitboxes (pin circle + label pill), responsive layout, Esc/Back navigation, and safe status/feedback positioning.
+- Exploration Stage & Camera: `HanoiExplorationScene.cs`. 0.85f camera zoom (+38.4% broader view, zero outer void), spatial gate exit trigger at X >= 1520.
+- Storybook UI: `DialogueBox.cs`, `QuestHUD.cs`, `InventoryBar.cs`, `StallPuzzleScene.cs`. Responsive anchoring, anti-collision text formatting, dynamic active quest display (Q1/Q2/Q3), symmetric inventory tray margins, and pixel-aligned button hitboxes.
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | Bé Mây Cloud Redesign | 5-puff fluffy magical cloud, rosy cheeks, golden crest, mini tilted nón lá, leather pouch, expressive sparkly eyes | M1 | ORIGINAL_REQUEST §R1 |
-| 2 | Bút Chì Companion Redesign | 3-facet hexagonal wooden body, wood grain, pink eraser, silver ferrule, eye tracking, cyan magic tip with star dust | M1 | ORIGINAL_REQUEST §R1 |
-| 3 | Bóng Xám Visual Helper | Dreamy slate-violet storm cloud with soulful expressive eyes and falling mist particles (`DrawBongXam`) | M1 | Plan §Component 2 |
-| 4 | Procedural Particle Emitter | Lightweight procedural particle system supporting CloudPuff, Steam, Sparkles, Confetti with headless test safety | M2 | ORIGINAL_REQUEST §R2 |
-| 5 | Cloud Glide & Dash Kinematics | Smooth deceleration, Space/Shift Dash mechanics with cloud puffs, preserving `GetVerticalBobbingOffset() == 0f` when idle | M2 | ORIGINAL_REQUEST §R3 |
-| 6 | Old Quarter Grid Line Removal | Remove Cartesian checkerboard grid lines in `HanoiExplorationScene.cs` (lines 708-715) | M3 | ORIGINAL_REQUEST §R2 |
-| 7 | Cobblestone Street & Environment Art | Procedural cobblestones, moss patches, rain puddles with sky reflections, fallen petals/leaves, weathered colonial walls, green shutters, warm red lanterns | M3 | ORIGINAL_REQUEST §R2 |
-| 8 | Bà An Steaming Pho Stall | Bà An NPC with silver hair chignon and ladle, porcelain bowls, and steaming broth pot with glowing coals | M3 | Plan §Component 3 |
-| 9 | Pho Assembly Minigame Polish | Bouncy ingredient drop animation, steam puffs on broth addition, confetti explosion celebration on recipe completion | M4 | ORIGINAL_REQUEST §R3 |
-| 10 | Stall Puzzle Lerp Sliding | Smooth visual lerp interpolation for sliding stalls/carts and glowing multi-layer golden BFS path ribbon | M4 | ORIGINAL_REQUEST §R3 |
-| 11 | 7 Wonders World Map Expansion | Support 7 World Wonders in `WorldProgression.cs` & `WorldMapService.cs` with dual-contract preserving 4 legacy nodes for test compatibility | M5 | ORIGINAL_REQUEST §R4 |
-| 12 | Storybook Parchment Sea Chart Map | 2D vintage parchment sea chart with continental flight arcs, wonder diorama emblems, and progress states in `WorldMapScene.cs` | M5 | ORIGINAL_REQUEST §R4 |
-| 13 | Handmade Dó Paper Dialogue Box | Dó paper texture, deckled edges, and double-line gold trim corner flourishes in `DialogueBox.cs` | M5 | ORIGINAL_REQUEST §R4 |
-| 14 | Rustic Bamboo QuestHUD & Inventory | Bamboo slat framing, joint notches, and woven rattan backgrounds in `QuestHUD.cs` and `InventoryBar.cs` | M5 | ORIGINAL_REQUEST §R4 |
-| 15 | Test Suite Preservation (567/567) | Complete test suite preservation under Release configuration (`dotnet test Tests/GameProject.Tests.csproj -c Release`) | M6 | ORIGINAL_REQUEST §R5 |
+| 1 | Hue Exploration Scene & Transition | Create `HueExplorationScene.cs` and wire `Program.cs` scene coordination for Hue travel and return | M1 | ORIGINAL_REQUEST §R1 |
+| 2 | Progression Unlock & Desync Safety | Auto-unlock Hue when Hanoi is completed in `WorldProgression.cs` & `SaveData.Sanitize()` | M1 | ORIGINAL_REQUEST §R1 |
+| 3 | Expanded World Map Hitboxes & Click Handling | Hitbox checks both pin circle and label pill in `WorldMapScene.cs`; single-click flow preserved | M1 | ORIGINAL_REQUEST §R1 |
+| 4 | Long Bien Gate Spatial Exit | Add automatic spatial transition trigger when walking east through opened gate (X >= 1520) | M1 | ORIGINAL_REQUEST §R1 |
+| 5 | World Map Pin Non-Overlapping Layout | Redesign pin coordinates with >=64px pairwise separation; shift Rio NW, BacCuc down, S-curve for Vietnam | M1 | ORIGINAL_REQUEST §R3 |
+| 6 | Hanoi Exploration Camera Zoom | Set `CameraTracker.Zoom = 0.85f` in `HanoiExplorationScene.cs` for broader view with zero void exposure | M1 | ORIGINAL_REQUEST §R3 |
+| 7 | World Map UI Collision Cleanup | Fix BacCuc/info text collision, Album button/feedback banner overlap, preview banner status pill margin, and add Esc/Back button | M1 | ORIGINAL_REQUEST §R2 |
+| 8 | Storybook UI Polish & Alignment | Fix DialogueBox text/prompt collision and choice step; dynamic QuestHUD Q1/Q2/Q3 progression; symmetric InventoryBar padding; StallPuzzle hitbox alignment | M1 | ORIGINAL_REQUEST §R2 |
+| 9 | E2E Testing Suite & Regression Verification | Comprehensive opaque-box test suite for R1, R2, R3 (Tiers 1-4) with 100% pass and adversarial hardening | M2 | ORIGINAL_REQUEST §Verification |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Character Presentation Revamp | `VectorRenderer.cs`, `HanoiPalette.cs` | none | DONE |
-| M2 | Particle System & Kinematics Dash | `ParticleEmitter.cs`, `CharacterKinematics.cs`, Input ports | none | DONE |
-| M3 | Old Quarter Environment Art | `HanoiExplorationScene.cs` | M1, M2 | DONE |
-| M4 | Minigames Polish | `PhoAssemblyScene.cs`, `StallPuzzleScene.cs` | M2 | DONE |
-| M5 | 7 Wonders World Map & Storybook UI | `WorldProgression.cs`, `WorldMapService.cs`, `WorldMapScene.cs`, `DialogueBox.cs`, `QuestHUD.cs`, `InventoryBar.cs` | none | DONE |
-| M6 | Final Acceptance & Regression Verification | Full test execution (567/567 passed), adversarial coverage audit | M1, M2, M3, M4, M5 | DONE |
+| M1 | Core Implementation (Progression, UI Polish, Camera & Map Zoom) | `HueExplorationScene.cs`, `Program.cs`, `WorldProgression.cs`, `SaveData.cs`, `HanoiExplorationScene.cs`, `WorldMapScene.cs`, `DialogueBox.cs`, `QuestHUD.cs`, `InventoryBar.cs`, `StallPuzzleScene.cs` | none | DONE |
+| M2 | Final E2E Test Suite & Acceptance Gate | E2E test suite (Tiers 1-4, `TEST_READY.md`), full test pass (631/631 passed), Tier 5 adversarial audit | M1 | DONE |
 
 ## Interface Contracts
-### `VectorRenderer` ↔ Caller Scenes
-- `DrawBeMay(Vector2 feetPos, FacingDirection facing, float animTime, bool isMoving, float scale = 1.0f, bool withShadow = true)`
-- `DrawButChi(Vector2 floatingPos, float animTime, float scale = 1.0f)`
-- `DrawBongXam(Vector2 centerPos, float animTime, float scale = 1.0f)`
-- `DrawBaAnPhoStall(Vector2 pos, string stallName, float animTime)`
+### `HueExplorationScene` ↔ `Program.cs` / `SceneManager`
+- Implements `IScene`.
+- Constructor: `HueExplorationScene(SaveData saveData, IAudioService? audioService = null, IInputService? inputService = null, IEventBus? eventBus = null)`
+- Properties: `bool RequestWorldMap { get; set; }`
+- `Program.cs` transitions:
+  - `wm.RequestTravelTo == "Hue"` -> `sceneManager.SwitchScene(new HueExplorationScene(...))`
+  - `sceneManager.CurrentScene is HueExplorationScene hue && hue.RequestWorldMap` -> switch to `WorldMapScene(...)`
 
-### `ParticleEmitter` ↔ Scenes
-- `EmitCloudPuff(Vector2 pos, int count = 3)`
-- `EmitSteam(Vector2 potPos, float dt)`
-- `EmitSparkles(Vector2 pos, Color color, int count = 5)`
-- `EmitConfetti(Vector2 center, int count = 30)`
-- `Update(float dt)`, `Draw()`, `UpdateAndDraw(float dt)`, `Clear()`, `ParticleCount`
-- Safe for headless tests: `if (!Raylib.IsWindowReady()) return;` inside `Draw()`.
+### `WorldMapScene` ↔ `WorldProgression` & `Program.cs`
+- `GetPinAtMouse(Vector2 mouse)` checks pin circle ($r = 28f$) and label pill rectangle (`nameBg`).
+- Pin coordinates maintain $\ge 64f$ Euclidean distance for all distinct pairs.
+- `RequestTravelTo`: string ID representing target region (`"Hanoi"`, `"Hue"`, etc.).
+- Back navigation: `[Esc]` key or back button sets `RequestTravelTo = "Hanoi"`.
 
-### `CharacterKinematics` ↔ Input & Scenes
-- `bool TryDash(Vector2 inputDirection)`
-- `bool IsDashing`, `float DashTimer`, `float DashCooldown`
-- `GetVerticalBobbingOffset()` returns strictly `0f` when `!IsMoving`.
-- `IInputService.IsDashJustPressed` bound to `LeftShift`, `RightShift`, `Space`.
-
-### `WorldMapService` ↔ Tests & Scenes
-- `GetRegionNodes(WorldProgression progression)` returns exactly 4 legacy nodes (Hanoi, Hue, HoiAn, SaiGon) to satisfy `Tests/WorldMapTests.cs:18`.
-- `GetWorldWonderNodes(WorldProgression progression)` returns 7 World Wonders for `WorldMapScene.cs`.
-- `TrySelectRegion(string regionId, WorldProgression progression, out string failureReason)` resolves against both wonder and legacy nodes.
+### `HanoiExplorationScene` ↔ `Camera2DTracker`
+- `CameraTracker.Zoom = 0.85f`.
+- Visible world dimensions $1505.9 \times 847.1$ inside map bounds $[0, 0, 1600, 900]$.
 
 ## Code Layout
-- `Source/Graphics/HanoiPalette.cs` — Owned by M1
-- `Source/Graphics/VectorRenderer.cs` — Owned by M1
-- `Source/Graphics/ParticleEmitter.cs` — Owned by M2 (NEW)
-- `Source/Core/Movement/CharacterKinematics.cs` — Owned by M2
-- `Source/Core/Ports/IInputService.cs` — Owned by M2
-- `Source/Graphics/RaylibInputService.cs` — Owned by M2
-- `Source/Core/Ports/MockInputService.cs` — Owned by M2
-- `Source/Stages/HanoiExplorationScene.cs` — Owned by M3
-- `Source/Stages/PhoAssemblyScene.cs` — Owned by M4
-- `Source/Stages/StallPuzzleScene.cs` — Owned by M4
-- `Source/Core/Models/WorldProgression.cs` — Owned by M5
-- `Source/Core/WorldMap/WorldMapService.cs` — Owned by M5
-- `Source/Stages/WorldMapScene.cs` — Owned by M5
-- `Source/UI/DialogueBox.cs` — Owned by M5
-- `Source/UI/QuestHUD.cs` — Owned by M5
-- `Source/UI/InventoryBar.cs` — Owned by M5
-- Core Domain Engines (READ-ONLY, UNTOUCHED):
-  - `Source/Core/Puzzles/PhoCookingEngine.cs`
-  - `Source/Core/Puzzles/SpatialGridEngine.cs`
-  - `Source/Core/Models/SaveData.cs`
-  - `Source/Core/Quests/QuestManager.cs`
+- `Source/Stages/HueExplorationScene.cs` — Owned by M1
+- `Program.cs` — Owned by M1
+- `Source/Core/Models/WorldProgression.cs` — Owned by M1
+- `Source/Core/Models/SaveData.cs` — Owned by M1
+- `Source/Stages/HanoiExplorationScene.cs` — Owned by M1
+- `Source/Stages/WorldMapScene.cs` — Owned by M1
+- `Source/UI/DialogueBox.cs` — Owned by M1
+- `Source/UI/QuestHUD.cs` — Owned by M1
+- `Source/UI/InventoryBar.cs` — Owned by M1
+- `Source/Stages/StallPuzzleScene.cs` — Owned by M1
+- `Tests/E2EProgressionAndLayoutTests.cs` & `Tests/MapZoomAndLayoutTests.cs` & `Tests/ResponsiveUILayoutTests.cs` — Owned by E2E Testing Track / M2
