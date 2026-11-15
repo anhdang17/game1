@@ -57,6 +57,52 @@ public sealed class QuestFlags
     [JsonPropertyName("Level1_Finished")]
     public bool Level1_Finished { get; set; }
 
+    // Hue Chapter 2 Flags
+    [JsonPropertyName("Hue_Q1_Started")]
+    public bool Hue_Q1_Started { get; set; }
+
+    [JsonPropertyName("Hue_Q1_BunSoiTo_Collected")]
+    public bool Hue_Q1_BunSoiTo_Collected { get; set; }
+
+    [JsonPropertyName("Hue_Q1_BapBo_Collected")]
+    public bool Hue_Q1_BapBo_Collected { get; set; }
+
+    [JsonPropertyName("Hue_Q1_ChaCua_Collected")]
+    public bool Hue_Q1_ChaCua_Collected { get; set; }
+
+    [JsonPropertyName("Hue_Q1_NuocDungHue_Collected")]
+    public bool Hue_Q1_NuocDungHue_Collected { get; set; }
+
+    [JsonPropertyName("Hue_Q1_RauSongHue_Collected")]
+    public bool Hue_Q1_RauSongHue_Collected { get; set; }
+
+    [JsonPropertyName("Hue_Q1_Completed")]
+    public bool Hue_Q1_Completed { get; set; }
+
+    [JsonPropertyName("Hue_Q2_Started")]
+    public bool Hue_Q2_Started { get; set; }
+
+    [JsonPropertyName("Hue_Q2_BunBoCooked")]
+    public bool Hue_Q2_BunBoCooked { get; set; }
+
+    [JsonPropertyName("Hue_Q2_Completed")]
+    public bool Hue_Q2_Completed { get; set; }
+
+    [JsonPropertyName("Hue_Q3_Started")]
+    public bool Hue_Q3_Started { get; set; }
+
+    [JsonPropertyName("Hue_Q3_PuzzleSolved")]
+    public bool Hue_Q3_PuzzleSolved { get; set; }
+
+    [JsonPropertyName("Hue_Q3_Completed")]
+    public bool Hue_Q3_Completed { get; set; }
+
+    [JsonPropertyName("Gate_HoiAn_Unlocked")]
+    public bool Gate_HoiAn_Unlocked { get; set; }
+
+    [JsonPropertyName("Hue_Finished")]
+    public bool Hue_Finished { get; set; }
+
     public static QuestFlags CreateDefault() => new();
 
     public int GetQ1CollectedCount()
@@ -71,6 +117,19 @@ public sealed class QuestFlags
     }
 
     public bool AreAllQ1IngredientsCollected() => GetQ1CollectedCount() == 5;
+
+    public int GetHueQ1CollectedCount()
+    {
+        int count = 0;
+        if (Hue_Q1_BunSoiTo_Collected) count++;
+        if (Hue_Q1_BapBo_Collected) count++;
+        if (Hue_Q1_ChaCua_Collected) count++;
+        if (Hue_Q1_NuocDungHue_Collected) count++;
+        if (Hue_Q1_RauSongHue_Collected) count++;
+        return count;
+    }
+
+    public bool AreAllHueQ1IngredientsCollected() => GetHueQ1CollectedCount() == 5;
 
     public bool GetFlag(string flagName)
     {
@@ -92,6 +151,22 @@ public sealed class QuestFlags
             nameof(Gate_LongBien_Unlocked) => Gate_LongBien_Unlocked,
             nameof(GrayShadow_LetterRead) => GrayShadow_LetterRead,
             nameof(Level1_Finished) => Level1_Finished,
+
+            nameof(Hue_Q1_Started) => Hue_Q1_Started,
+            nameof(Hue_Q1_BunSoiTo_Collected) => Hue_Q1_BunSoiTo_Collected,
+            nameof(Hue_Q1_BapBo_Collected) => Hue_Q1_BapBo_Collected,
+            nameof(Hue_Q1_ChaCua_Collected) => Hue_Q1_ChaCua_Collected,
+            nameof(Hue_Q1_NuocDungHue_Collected) => Hue_Q1_NuocDungHue_Collected,
+            nameof(Hue_Q1_RauSongHue_Collected) => Hue_Q1_RauSongHue_Collected,
+            nameof(Hue_Q1_Completed) => Hue_Q1_Completed,
+            nameof(Hue_Q2_Started) => Hue_Q2_Started,
+            nameof(Hue_Q2_BunBoCooked) => Hue_Q2_BunBoCooked,
+            nameof(Hue_Q2_Completed) => Hue_Q2_Completed,
+            nameof(Hue_Q3_Started) => Hue_Q3_Started,
+            nameof(Hue_Q3_PuzzleSolved) => Hue_Q3_PuzzleSolved,
+            nameof(Hue_Q3_Completed) => Hue_Q3_Completed,
+            nameof(Gate_HoiAn_Unlocked) => Gate_HoiAn_Unlocked,
+            nameof(Hue_Finished) => Hue_Finished,
             _ => false
         };
     }
@@ -116,6 +191,22 @@ public sealed class QuestFlags
             case nameof(Gate_LongBien_Unlocked): Gate_LongBien_Unlocked = value; break;
             case nameof(GrayShadow_LetterRead): GrayShadow_LetterRead = value; break;
             case nameof(Level1_Finished): Level1_Finished = value; break;
+
+            case nameof(Hue_Q1_Started): Hue_Q1_Started = value; break;
+            case nameof(Hue_Q1_BunSoiTo_Collected): Hue_Q1_BunSoiTo_Collected = value; break;
+            case nameof(Hue_Q1_BapBo_Collected): Hue_Q1_BapBo_Collected = value; break;
+            case nameof(Hue_Q1_ChaCua_Collected): Hue_Q1_ChaCua_Collected = value; break;
+            case nameof(Hue_Q1_NuocDungHue_Collected): Hue_Q1_NuocDungHue_Collected = value; break;
+            case nameof(Hue_Q1_RauSongHue_Collected): Hue_Q1_RauSongHue_Collected = value; break;
+            case nameof(Hue_Q1_Completed): Hue_Q1_Completed = value; break;
+            case nameof(Hue_Q2_Started): Hue_Q2_Started = value; break;
+            case nameof(Hue_Q2_BunBoCooked): Hue_Q2_BunBoCooked = value; break;
+            case nameof(Hue_Q2_Completed): Hue_Q2_Completed = value; break;
+            case nameof(Hue_Q3_Started): Hue_Q3_Started = value; break;
+            case nameof(Hue_Q3_PuzzleSolved): Hue_Q3_PuzzleSolved = value; break;
+            case nameof(Hue_Q3_Completed): Hue_Q3_Completed = value; break;
+            case nameof(Gate_HoiAn_Unlocked): Gate_HoiAn_Unlocked = value; break;
+            case nameof(Hue_Finished): Hue_Finished = value; break;
         }
     }
 }

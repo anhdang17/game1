@@ -34,6 +34,9 @@ public static class QuestIds
     public const string Hanoi01 = "Quest_Hanoi_01";
     public const string Hanoi02 = "Quest_Hanoi_02";
     public const string Hanoi03 = "Quest_Hanoi_03";
+    public const string Hue01 = "Quest_Hue_01";
+    public const string Hue02 = "Quest_Hue_02";
+    public const string Hue03 = "Quest_Hue_03";
 }
 
 /// <summary>
@@ -91,6 +94,10 @@ public sealed class WorldProgression
     public bool IsRegionUnlocked(string regionId)
     {
         if (string.Equals(regionId, RegionHue, StringComparison.OrdinalIgnoreCase) && IsRegionCompleted(RegionHanoi))
+        {
+            return true;
+        }
+        if (string.Equals(regionId, RegionHoiAn, StringComparison.OrdinalIgnoreCase) && IsRegionCompleted(RegionHue))
         {
             return true;
         }
@@ -159,6 +166,11 @@ public sealed class WorldProgression
         if (IsRegionCompleted(RegionHanoi))
         {
             UnlockRegion(RegionHue);
+        }
+
+        if (IsRegionCompleted(RegionHue))
+        {
+            UnlockRegion(RegionHoiAn);
         }
 
         RegionColorRestoration ??= new Dictionary<string, float>();

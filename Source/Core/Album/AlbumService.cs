@@ -177,6 +177,43 @@ public sealed class AlbumService : IAlbumService
         Content = "Mỗi con phố xưa gắn liền với một nghề thủ công truyền thống: Hàng Bạc làm vàng bạc, Hàng Gai dệt lụa tơ tằm, Hàng Buồm bán buồm thuyền."
     };
 
+    public const string FactCardHueBunBo = "FactCard_Hue_BunBo";
+    public const string FactCardHueNgoMon = "FactCard_Hue_NgoMon";
+    public const string FactCardHueSongHuong = "FactCard_Hue_SongHuong";
+    public const string FactCardHueThienMu = "FactCard_Hue_ThienMu";
+
+    private static readonly FactCard BunBoHueCard = new()
+    {
+        Id = FactCardHueBunBo,
+        Title = "Hương Vị Bún Bò Cố Đô",
+        Category = "Ẩm Thực",
+        Content = "Bún Bò Huế nức tiếng với nước dùng ruốc sả thơm nồng, sợi bún to làng Vân Cù, lát bắp bò giòn ngọt và viên chả cua béo ngậy."
+    };
+
+    private static readonly FactCard NgoMonCard = new()
+    {
+        Id = FactCardHueNgoMon,
+        Title = "Ngọ Môn & Hoàng Thành Huế",
+        Category = "Di Sản",
+        Content = "Cổng chính phía nam của Hoàng thành Huế, công trình kiến trúc cung đình đồ sộ bằng gỗ lim và đá thanh với lầu Ngũ Phụng tráng lệ."
+    };
+
+    private static readonly FactCard SongHuongCard = new()
+    {
+        Id = FactCardHueSongHuong,
+        Title = "Dòng Sông Hương & Cầu Tràng Tiền",
+        Category = "Thắng Cảnh",
+        Content = "Dòng Hương giang thơ mộng lững lờ trôi qua lòng thành phố Huế, soi bóng cầu Tràng Tiền sáu vài mười hai nhịp duyên dáng."
+    };
+
+    private static readonly FactCard ThienMuCard = new()
+    {
+        Id = FactCardHueThienMu,
+        Title = "Chùa Thiên Mụ & Tháp Phước Duyên",
+        Category = "Văn Hóa",
+        Content = "Ngôi chùa cổ kính hơn 400 năm tuổi tọa lạc bên bờ sông Hương, nổi bật với tháp Phước Duyên hình bát giác 7 tầng uy nghiêm."
+    };
+
     private static readonly Dictionary<string, FactCard> AllFactCards = new(StringComparer.OrdinalIgnoreCase)
     {
         { "FactCard_PhoHaNoi", PhoCard },
@@ -189,7 +226,19 @@ public sealed class AlbumService : IAlbumService
         { AlbumIds.FactCardSenTayHo, SenTayHoCard },
 
         { "FactCard_36PhoPhuong", PhoCoCard },
-        { AlbumIds.FactCardPhoCo, PhoCoCard }
+        { AlbumIds.FactCardPhoCo, PhoCoCard },
+
+        { FactCardHueBunBo, BunBoHueCard },
+        { "FactCard_BunBoHue", BunBoHueCard },
+
+        { FactCardHueNgoMon, NgoMonCard },
+        { "FactCard_NgoMon", NgoMonCard },
+
+        { FactCardHueSongHuong, SongHuongCard },
+        { "FactCard_SongHuong", SongHuongCard },
+
+        { FactCardHueThienMu, ThienMuCard },
+        { "FactCard_ThienMu", ThienMuCard }
     };
 
     public IReadOnlyList<JournalPage> GetAllJournalPages() => new[] { HanoiPage1, HuePage2 };

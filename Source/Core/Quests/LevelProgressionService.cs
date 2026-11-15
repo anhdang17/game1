@@ -74,4 +74,55 @@ public sealed class LevelProgressionService
         // 7. Atomic Persistent Auto-Save
         _saveLoadService?.Save(_saveData);
     }
+
+    /// <summary>
+    /// Triggered upon Hue Quest 2 resolution: blooms 33.3% regional color to Hue.
+    /// </summary>
+    public void OnHueQuest2Completed()
+    {
+        float oldColor = _saveData.WorldProgression.GetColorRestoration(WorldProgression.RegionHue);
+        float newColor = 33.3f;
+        _saveData.WorldProgression.SetColorRestoration(WorldProgression.RegionHue, newColor);
+        _saveData.QuestFlags.Hue_Q2_Completed = true;
+
+        _eventBus?.Publish(new RegionColorUpdatedEvent(WorldProgression.RegionHue, newColor));
+        _eventBus?.Publish(new ColorRestoredEvent(WorldProgression.RegionHue, oldColor, newColor, HueQuests.Quest2Id));
+    }
+
+    /// <summary>
+    /// Triggered upon Hue Quest 3 / Climax resolution: completes Hue level, unlocks Hoi An gate,
+    /// delivers Memory Journal page 2, Thien Mu Stamp, unlocks Hoi An region, and auto-saves.
+    /// </summary>
+    public void CompleteHue()
+    {
+        // 1. 100% Color Bloom
+        float oldColor = _saveData.WorldProgression.GetColorRestoration(WorldProgression.RegionHue);
+        _saveData.WorldProgression.SetColorRestoration(WorldProgression.RegionHue, 100.0f);
+        _saveData.WorldProgression.MarkRegionCompleted(WorldProgression.RegionHue);
+
+        _eventBus?.Publish(new RegionColorUpdatedEvent(WorldProgression.RegionHue, 100.0f));
+        _eventBus?.Publish(new ColorRestoredEvent(WorldProgression.RegionHue, oldColor, 100.0f, HueQuests.Quest3Id));
+        _eventBus?.Publish(new RegionCompletedEvent(WorldProgression.RegionHue));
+
+        // 2. Gate Unlock
+        _saveData.QuestFlags.Gate_HoiAn_Unlocked = true;
+        _saveData.QuestFlags.Hue_Q3_Completed = true;
+        _saveData.QuestFlags.Hue_Finished = true;
+        _eventBus?.Publish(new GateUnlockedEvent("Gate_HoiAn", WorldProgression.RegionHue));
+
+        // 3. Award Memory Journal Page #2
+        _saveData.CollectionAlbum.AddJournalPage(Album.AlbumService.HuePage2.Id);
+        _eventBus?.Publish(new JournalPageAwardedEvent(Album.AlbumService.HuePage2.Id, Album.AlbumService.HuePage2.Title, WorldProgression.RegionHue));
+
+        // 4. Award Hue Stamp
+        _saveData.CollectionAlbum.AddStamp(Album.AlbumService.HueStamp.Id);
+        _eventBus?.Publish(new StampAwardedEvent(Album.AlbumService.HueStamp.Id, Album.AlbumService.HueStamp.Name, WorldProgression.RegionHue));
+
+        // 5. Unlock Hoi An Region
+        _saveData.WorldProgression.UnlockRegion(WorldProgression.RegionHoiAn);
+        _eventBus?.Publish(new RegionUnlockedEvent(WorldProgression.RegionHoiAn));
+
+        // 6. Atomic Persistent Auto-Save
+        _saveLoadService?.Save(_saveData);
+    }
 }

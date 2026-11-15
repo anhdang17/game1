@@ -15,6 +15,24 @@ public static class ItemIds
     public const string ThaoMoc = "Item_ThaoMoc";
     public const string GiaVi = "Item_GiaVi"; // Alias for ThaoMoc garnish
 
+    // Hue Chapter 2 Items
+    public const string BunSoiTo = "Item_BunSoiTo";
+    public const string BapBo = "Item_BapBo";
+    public const string ChaCua = "Item_ChaCua";
+    public const string NuocDungHue = "Item_NuocDungHue";
+    public const string RauSongHue = "Item_RauSongHue";
+    public const string HoaDang = "Item_HoaDang";
+    public const string NonBaiTho = "Item_NonBaiTho";
+
+    public static readonly IReadOnlyList<string> AllBunBoIngredients = new[]
+    {
+        BunSoiTo,
+        BapBo,
+        ChaCua,
+        NuocDungHue,
+        RauSongHue
+    };
+
     public static readonly IReadOnlyList<string> AllPhoIngredients = new[]
     {
         BanhPho,

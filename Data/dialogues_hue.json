@@ -1,0 +1,345 @@
+{
+  "dialogues": [
+    {
+      "dialogueId": "Dialogue_Hue_Intro",
+      "startNodeId": "Node_Intro_01",
+      "nodes": [
+        {
+          "id": "Node_Intro_01",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Happy",
+          "avatarPosition": "Left",
+          "text": "Chào mừng Bé Mây đến với Cố Đô Huế! Hoàng thành Ngọ Môn trầm mặc cổ kính trước mặt chúng ta kìa.",
+          "nextNodeId": "Node_Intro_02",
+          "branches": []
+        },
+        {
+          "id": "Node_Intro_02",
+          "speaker": "Bé Mây",
+          "speakerAvatar": "Avatar_May_Determined",
+          "avatarPosition": "Left",
+          "text": "Thành quách nguy nga quá Bút Chì ơi! Nhưng sắc màu ở đây cũng đang nhạt nhòa vì Bóng Xám. Mình hãy tìm bà con quanh chợ và sông Hương xem sao nhé!",
+          "nextNodeId": null,
+          "branches": []
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_MeHue_Intro",
+      "startNodeId": "Node_MeHue_01",
+      "nodes": [
+        {
+          "id": "Node_MeHue_01",
+          "speaker": "Mệ Bích",
+          "speakerAvatar": "Avatar_MeHue_Smile",
+          "avatarPosition": "Right",
+          "text": "Chào hai cháu nhỏ... Cố Đô dạo ni ảm đạm quá, sông Hương lững lờ trôi mà vắng bóng tiếng đò ca. Mệ muốn nấu nồi Bún Bò Huế gia truyền để thết đãi bà con tìm lại niềm vui, ngặt nỗi thiếu mất nguyên liệu...",
+          "nextNodeId": "Node_MeHue_02",
+          "branches": []
+        },
+        {
+          "id": "Node_MeHue_02",
+          "speaker": "Bé Mây",
+          "speakerAvatar": "Avatar_May_Determined",
+          "avatarPosition": "Left",
+          "text": "Dạ Mệ đừng lo ạ! Cháu và Bút Chì sẽ đi tìm đủ nguyên liệu về cho Mệ ngay!",
+          "branches": [
+            {
+              "choiceId": "Choice_Accept",
+              "choiceText": "Cháu sẵn sàng rồi, thưa Mệ!",
+              "nextNodeId": "Node_MeHue_Accept"
+            },
+            {
+              "choiceId": "Choice_AskRecipe",
+              "choiceText": "Mệ cần những nguyên liệu gì ạ?",
+              "nextNodeId": "Node_MeHue_Ask"
+            }
+          ]
+        },
+        {
+          "id": "Node_MeHue_Accept",
+          "speaker": "Mệ Bích",
+          "speakerAvatar": "Avatar_MeHue_Smile",
+          "avatarPosition": "Right",
+          "text": "Cảm ơn cháu nhiều nghen! Hãy ghé các hàng quán quanh chợ Đông Ba và bến đò nhé!",
+          "nextNodeId": null,
+          "actionTrigger": "Start_Hue_Quest_1"
+        },
+        {
+          "id": "Node_MeHue_Ask",
+          "speaker": "Mệ Bích",
+          "speakerAvatar": "Avatar_MeHue_Smile",
+          "avatarPosition": "Right",
+          "text": "Mệ cần 5 thức: bún sợi to làng Vân Cù, bắp bò hoa tươi, chả cua quết nhuyễn, nước dùng ruốc sả đậm đà, và dĩa rau sống hoa chuối.",
+          "nextNodeId": null,
+          "actionTrigger": "Start_Hue_Quest_1"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_MeHue_InProgress",
+      "startNodeId": "Node_Prog_01",
+      "nodes": [
+        {
+          "id": "Node_Prog_01",
+          "speaker": "Mệ Bích",
+          "speakerAvatar": "Avatar_MeHue_Smile",
+          "avatarPosition": "Right",
+          "text": "Cháu gom đủ 5 thứ chưa? Bún Vân Cù, bắp bò, chả cua, nước dùng ruốc sả với rau sống bắp chuối... Thiếu một vị là không ra chất Bún Bò Huế mô nhen!",
+          "nextNodeId": null
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_MeHue_TurnIn",
+      "startNodeId": "Node_TurnIn_01",
+      "nodes": [
+        {
+          "id": "Node_TurnIn_01",
+          "speaker": "Mệ Bích",
+          "speakerAvatar": "Avatar_MeHue_Smile",
+          "avatarPosition": "Right",
+          "text": "Ôi chao, đủ cả 5 nguyên liệu hảo hạng rồi! Bún sợi to Vân Cù, bắp bò hoa, chả cua thơm lừng, nước dùng ruốc sả và rổ rau sống tươi roi rói!",
+          "nextNodeId": "Node_TurnIn_02"
+        },
+        {
+          "id": "Node_TurnIn_02",
+          "speaker": "Mệ Bích",
+          "speakerAvatar": "Avatar_MeHue_Smile",
+          "avatarPosition": "Right",
+          "text": "Giờ mệ cháu mình cùng bắt tay vào nấu và bày biện tô Bún Bò Huế chuẩn vị Cố Đô nhé!",
+          "nextNodeId": null,
+          "actionTrigger": "Start_Hue_Quest_2"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_MeHue_PostCook",
+      "startNodeId": "Node_PostCook_01",
+      "nodes": [
+        {
+          "id": "Node_PostCook_01",
+          "speaker": "Mệ Bích",
+          "speakerAvatar": "Avatar_MeHue_Smile",
+          "avatarPosition": "Right",
+          "text": "Tô Bún Bò Huế thơm lừng, đỏ au màu ớt màu ruốc của mệ cháu mình đây rồi! Hương vị cố đô lan tỏa làm ấm lòng cả xóm nhỏ.",
+          "nextNodeId": "Node_PostCook_02"
+        },
+        {
+          "id": "Node_PostCook_02",
+          "speaker": "Mệ Bích",
+          "speakerAvatar": "Avatar_MeHue_Smile",
+          "avatarPosition": "Right",
+          "text": "Cháu hãy ra bến thuyền Sông Hương gặp bác lái đò nghen, nghe nói đêm nay có hội thả đèn hoa đăng lung linh lắm đó!",
+          "nextNodeId": null
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_BunSoiTo",
+      "startNodeId": "Node_BST_01",
+      "nodes": [
+        {
+          "id": "Node_BST_01",
+          "speaker": "O Sen Làng Vân Cù",
+          "speakerAvatar": "Avatar_OSen",
+          "avatarPosition": "Right",
+          "text": "Bún sợi to tráng thủ công của làng bún Vân Cù đây cháu! Sợi bún trắng ngần, dai mềm thấm đượm phong vị quê hương. Cháu mang về cho mệ Bích nghen!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_BunSoiTo"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_BapBo",
+      "startNodeId": "Node_BB_01",
+      "nodes": [
+        {
+          "id": "Node_BB_01",
+          "speaker": "Chú Năm Thịt Bò",
+          "speakerAvatar": "Avatar_ChuNam",
+          "avatarPosition": "Right",
+          "text": "Bắp bò hoa tươi roi rói, luộc lên giòn sần sật ngọt lịm của chú Năm đây! Nấu bún bò là phải có bắp bò ni mới đúng điệu!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_BapBo"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_ChaCua",
+      "startNodeId": "Node_CC_01",
+      "nodes": [
+        {
+          "id": "Node_CC_01",
+          "speaker": "Dì Ba Chả Cua",
+          "speakerAvatar": "Avatar_DiBa",
+          "avatarPosition": "Right",
+          "text": "Chả cua quết nhuyễn trộn gạch cua đồng đỏ au thơm phức của Dì Ba đây! Thả vào nồi bún bò nổi bồng bềnh béo ngậy!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_ChaCua"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_NuocDungHue",
+      "startNodeId": "Node_NDH_01",
+      "nodes": [
+        {
+          "id": "Node_NDH_01",
+          "speaker": "Mệ Năm Nồi Nước Lèo",
+          "speakerAvatar": "Avatar_MeNam",
+          "avatarPosition": "Right",
+          "text": "Nồi nước dùng hầm xương bò dậy mùi mắm ruốc sả ớt gia truyền đây cháu! Mệ đã chắt sẵn vào liễn sứ, cẩn thận kẻo nóng nghen!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_NuocDungHue"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Stall_RauSongHue",
+      "startNodeId": "Node_RSH_01",
+      "nodes": [
+        {
+          "id": "Node_RSH_01",
+          "speaker": "Cô Thảo Gánh Rau",
+          "speakerAvatar": "Avatar_CoThao",
+          "avatarPosition": "Right",
+          "text": "Rau thơm, bắp chuối bào mỏng tang và giá đỗ tươi non của Cô Thảo đây! Ăn kèm bún bò Huế là thanh mát tròn vị!",
+          "nextNodeId": null,
+          "actionTrigger": "Collect_RauSongHue"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Npc_SongHuong",
+      "startNodeId": "Node_Boatman_01",
+      "nodes": [
+        {
+          "id": "Node_Boatman_01",
+          "speaker": "Bác Lái Đò Sông Hương",
+          "speakerAvatar": "Avatar_BacLaiDo",
+          "avatarPosition": "Right",
+          "text": "Chào cháu bé! Bến sông Hương đang chuẩn bị cho hội thả đèn hoa đăng cầu an và phục hồi sắc màu cho Cố Đô. Nhưng những đóa hoa đăng đang cần được thắp sáng theo đúng nhịp điệu ca Huế trên sông.",
+          "nextNodeId": "Node_Boatman_02"
+        },
+        {
+          "id": "Node_Boatman_02",
+          "speaker": "Bé Mây",
+          "speakerAvatar": "Avatar_May_Determined",
+          "avatarPosition": "Left",
+          "text": "Cháu sẵn sàng rồi thưa bác! Cháu sẽ thắp sáng những đóa hoa đăng lung linh xuôi dòng sông Hương!",
+          "nextNodeId": null,
+          "actionTrigger": "Start_Hue_Quest_3"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_SongHuong_PostPuzzle",
+      "startNodeId": "Node_PostPuzzle_01",
+      "nodes": [
+        {
+          "id": "Node_PostPuzzle_01",
+          "speaker": "Bác Lái Đò Sông Hương",
+          "speakerAvatar": "Avatar_BacLaiDo",
+          "avatarPosition": "Right",
+          "text": "Kỳ diệu quá! Hàng trăm đóa hoa đăng bừng sáng rực rỡ trôi dọc dòng Hương Giang, phản chiếu lên Tháp Phước Duyên Chùa Thiên Mụ và nhịp cầu Tràng Tiền! Sắc màu Cố Đô đã hoàn toàn hồi sinh!",
+          "nextNodeId": "Node_PostPuzzle_02"
+        },
+        {
+          "id": "Node_PostPuzzle_02",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Happy",
+          "avatarPosition": "Left",
+          "text": "Cố Đô Huế đã rực rỡ sắc màu trở lại! Con đường xuôi về phương Nam tới Phố Cổ Hội An đã rộng mở!",
+          "nextNodeId": null,
+          "actionTrigger": "Complete_Hue_Climax"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_Gate_HoiAn",
+      "startNodeId": "Node_GateHoiAn_01",
+      "nodes": [
+        {
+          "id": "Node_GateHoiAn_01",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Happy",
+          "avatarPosition": "Left",
+          "text": "Cổng Thiên Lý Nam Tiến dẫn lối vào Phố Cổ Hội An lung linh đèn lồng bên sông Hoài!",
+          "branches": [
+            {
+              "choiceId": "Choice_Inspect",
+              "choiceText": "Ngắm nhìn non nước hữu tình",
+              "nextNodeId": "Node_GateHoiAn_Inspect"
+            },
+            {
+              "choiceId": "Choice_Cross",
+              "choiceText": "Tiếp tục cuộc hành trình",
+              "nextNodeId": "Node_GateHoiAn_Cross",
+              "requiredQuestFlag": "Gate_HoiAn_Unlocked"
+            }
+          ]
+        },
+        {
+          "id": "Node_GateHoiAn_Inspect",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Thinking",
+          "avatarPosition": "Left",
+          "text": "Vượt qua dãy Bạch Mã và đèo Hải Vân hùng vĩ, chúng ta sẽ đặt chân đến Di sản Phố cổ Hội An trứ danh.",
+          "nextNodeId": null
+        },
+        {
+          "id": "Node_GateHoiAn_Cross",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Happy",
+          "avatarPosition": "Left",
+          "text": "Cánh cổng đã mở rộng thênh thang! Chúng ta cùng mở bản đồ hành trình và tiến vào Hội An nào Bé Mây!",
+          "nextNodeId": null,
+          "actionTrigger": "Open_World_Map"
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_PoI_NgoMon",
+      "startNodeId": "Node_PoI_NM_01",
+      "nodes": [
+        {
+          "id": "Node_PoI_NM_01",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Thinking",
+          "avatarPosition": "Left",
+          "text": "Ngọ Môn - Cổng chính phía Nam của Hoàng Thành Huế xây dựng thời vua Minh Mạng, với lầu Ngũ Phụng mái lợp ngói hoàng lưu ly và thanh lưu ly uy nghiêm.",
+          "nextNodeId": null
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_PoI_ThienMu",
+      "startNodeId": "Node_PoI_TM_01",
+      "nodes": [
+        {
+          "id": "Node_PoI_TM_01",
+          "speaker": "Bút Chì",
+          "speakerAvatar": "Avatar_ButChi_Thinking",
+          "avatarPosition": "Left",
+          "text": "Chùa Thiên Mụ cổ kính soi bóng bên dòng sông Hương, tiếng chuông chùa ngân vang sớm chiều hòa quyện cùng tháp Phước Duyên trầm mặc.",
+          "nextNodeId": null
+        }
+      ]
+    },
+    {
+      "dialogueId": "Dialogue_PoI_TrangTien",
+      "startNodeId": "Node_PoI_TT_01",
+      "nodes": [
+        {
+          "id": "Node_PoI_TT_01",
+          "speaker": "Bé Mây",
+          "speakerAvatar": "Avatar_May_Happy",
+          "avatarPosition": "Left",
+          "text": "Cầu Tràng Tiền sáu vài mười hai nhịp bắc qua sông Hương thơ mộng, chứng nhân lịch sử nối đôi bờ vui của xứ Huế mộng mơ.",
+          "nextNodeId": null
+        }
+      ]
+    }
+  ]
+}
