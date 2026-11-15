@@ -1,6 +1,6 @@
 ﻿{
   "saveVersion": "1.0.0",
-  "lastSavedTimestamp": "2026-11-14T23:09:45.76577+00:00",
+  "lastSavedTimestamp": "2026-11-15T05:40:07.118907+00:00",
   "playerProfile": {
     "playerName": "Bé Mây",
     "currentRegionId": "Hanoi",
@@ -39,7 +39,22 @@
       "Q3_Completed": true,
       "Gate_LongBien_Unlocked": true,
       "GrayShadow_LetterRead": true,
-      "Level1_Finished": true
+      "Level1_Finished": true,
+      "Hue_Q1_Started": false,
+      "Hue_Q1_BunSoiTo_Collected": false,
+      "Hue_Q1_BapBo_Collected": false,
+      "Hue_Q1_ChaCua_Collected": false,
+      "Hue_Q1_NuocDungHue_Collected": false,
+      "Hue_Q1_RauSongHue_Collected": false,
+      "Hue_Q1_Completed": false,
+      "Hue_Q2_Started": false,
+      "Hue_Q2_BunBoCooked": false,
+      "Hue_Q2_Completed": false,
+      "Hue_Q3_Started": false,
+      "Hue_Q3_PuzzleSolved": false,
+      "Hue_Q3_Completed": false,
+      "Gate_HoiAn_Unlocked": false,
+      "Hue_Finished": false
     },
     "inventoryItems": [
       "Item_BanhPho",

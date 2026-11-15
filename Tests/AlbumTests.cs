@@ -91,4 +91,5 @@ public class AlbumTests
         Assert.Contains(cards, c => c.Title.Contains("Hoa Sen Tây Hồ"));
         Assert.Contains(cards, c => c.Title.Contains("36 Phố Phường"));
     }
-}
+} 
+
