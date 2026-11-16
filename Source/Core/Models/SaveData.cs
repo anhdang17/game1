@@ -103,7 +103,7 @@ public sealed class SaveData
             WorldProgression.UnlockRegion(WorldProgression.RegionHue);
         }
 
-        if (QuestFlags.Hue_Finished || QuestFlags.Hue_Q3_Completed || WorldProgression.IsRegionCompleted(WorldProgression.RegionHue))
+        if (QuestFlags.Hue_Finished || QuestFlags.Hue_Q3_Completed || QuestFlags.Gate_HoiAn_Unlocked || WorldProgression.IsRegionCompleted(WorldProgression.RegionHue))
         {
             WorldProgression.UnlockRegion(WorldProgression.RegionHoiAn);
         }

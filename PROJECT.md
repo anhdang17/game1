@@ -18,12 +18,19 @@
 | 7 | World Map UI Collision Cleanup | Fix BacCuc/info text collision, Album button/feedback banner overlap, preview banner status pill margin, and add Esc/Back button | M1 | ORIGINAL_REQUEST §R2 |
 | 8 | Storybook UI Polish & Alignment | Fix DialogueBox text/prompt collision and choice step; dynamic QuestHUD Q1/Q2/Q3 progression; symmetric InventoryBar padding; StallPuzzle hitbox alignment | M1 | ORIGINAL_REQUEST §R2 |
 | 9 | E2E Testing Suite & Regression Verification | Comprehensive opaque-box test suite for R1, R2, R3 (Tiers 1-4) with 100% pass and adversarial hardening | M2 | ORIGINAL_REQUEST §Verification |
+| 10 | Chapter 2 Cố Đô Huế Implementation | Exploration scene, Hue quests, dialogues, minigames, album | M3 | ORIGINAL_REQUEST §Chapter2 |
+| 11 | Chapter 2 E2E Testing Suite | Comprehensive E2E tests in Tests/HueChapter2E2ETests.cs | M4 | ORIGINAL_REQUEST §R1 |
+| 12 | Milestone 4 Phase 2 Adversarial Hardening | Hardening against Tests/Milestone4ChallengerTests.cs | M4 | ORIGINAL_REQUEST §R1 |
+| 13 | Technical Invariants & Repository Audit | Verify Overlaps, namespace aliases, camera zoom, MatchesId | M4 | ORIGINAL_REQUEST §R2, §R3 |
+| 14 | Final Victory Audit | Sentinel confirmation & clean gates | M4 | ORIGINAL_REQUEST §R4 |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
 | M1 | Core Implementation (Progression, UI Polish, Camera & Map Zoom) | `HueExplorationScene.cs`, `Program.cs`, `WorldProgression.cs`, `SaveData.cs`, `HanoiExplorationScene.cs`, `WorldMapScene.cs`, `DialogueBox.cs`, `QuestHUD.cs`, `InventoryBar.cs`, `StallPuzzleScene.cs` | none | DONE |
 | M2 | Final E2E Test Suite & Acceptance Gate | E2E test suite (Tiers 1-4, `TEST_READY.md`), full test pass (631/631 passed), Tier 5 adversarial audit | M1 | DONE |
+| M3 | Chapter 2 Cố Đô Huế Domain & Scene Implementation | Chapter 2 quests, exploration, dialogues, album integration | M2 | DONE |
+| M4 | Chapter 2 M4 Phase 2 Hardening & Final Victory Audit | Adversarial hardening against `Milestone4ChallengerTests.cs`, technical invariants, repository audit, victory audit | M3 | IN_PROGRESS |
 
 ## Interface Contracts
 ### `HueExplorationScene` ↔ `Program.cs` / `SceneManager`
