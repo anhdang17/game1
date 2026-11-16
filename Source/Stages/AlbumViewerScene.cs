@@ -4,6 +4,7 @@ using System.Numerics;
 using GameProject.Core.Album;
 using GameProject.Core.Events;
 using GameProject.Core.Models;
+using GameProject.Core.Movement;
 using GameProject.Core.Ports;
 using GameProject.Graphics;
 using Raylib_cs;
@@ -169,10 +170,25 @@ public sealed class AlbumViewerScene : IScene
     {
         if (!Raylib.IsWindowReady()) return;
 
-        // Parchment background
+        // Leather journal cover behind a parchment spread
         Color bg = new(255, 248, 230, 255);
-        Raylib.ClearBackground(bg);
-        Raylib.DrawRectangle(0, 0, 1280, 720, Raylib.ColorAlpha(bg, _transitionAlpha));
+        Raylib.ClearBackground(new Color(110, 68, 42, 255));
+        Raylib.DrawRectangleGradientV(0, 0, 1280, 720, new Color(124, 78, 48, 255), new Color(86, 52, 32, 255));
+        Raylib.DrawRectangleLinesEx(new Rectangle(14, 14, 1252, 692), 2f, new Color(206, 160, 96, 160));
+        Rectangle paper = new(30f, 10f, 1220f, 700f);
+        VectorRenderer.DrawRoundedRect(paper, 0.03f, bg, new Color(90, 56, 34, 255), 2f);
+        for (int ly = 120; ly < 700; ly += 28)
+        {
+            Raylib.DrawLineEx(new Vector2(46f, ly), new Vector2(1234f, ly), 1f, new Color(214, 196, 160, 70));
+        }
+        // Binding rings on the left edge
+        for (int ry = 70; ry < 680; ry += 60)
+        {
+            Raylib.DrawCircleV(new Vector2(30f, ry), 8f, new Color(196, 198, 204, 255));
+            Raylib.DrawCircleLines(30, ry, 8f, HanoiPalette.CartoonOutline);
+            Raylib.DrawCircleV(new Vector2(30f, ry), 3f, new Color(86, 52, 32, 255));
+        }
+        Raylib.DrawRectangle(0, 0, 1280, 720, Raylib.ColorAlpha(bg, 1f - _transitionAlpha));
 
         DrawHeader();
         DrawTabs();
@@ -334,55 +350,135 @@ public sealed class AlbumViewerScene : IScene
         }
     }
 
+    // Postcard illustrations: painted in full colour, then desaturated to grey while the page is locked.
+    private static Color Paint(Color c, bool isUnlocked) => isUnlocked ? c : HanoiPalette.ApplyDesaturation(c, 8f);
+
+    private static void DrawPostcardFrame(Rectangle rect, bool isUnlocked, string caption)
+    {
+        // Scalloped stamp-edge border and caption ribbon
+        Raylib.DrawRectangleRoundedLinesEx(rect, 0.08f, 4, 6f, new Color(255, 252, 240, 255));
+        Raylib.DrawRectangleRoundedLinesEx(new Rectangle(rect.X + 6f, rect.Y + 6f, rect.Width - 12f, rect.Height - 12f), 0.07f, 4, 1.2f, Raylib.ColorAlpha(HanoiPalette.CartoonOutline, 0.35f));
+        Vector2 sz = FontManager.Instance.MeasureText(caption, 13f);
+        Rectangle ribbon = new(rect.X + rect.Width * 0.5f - sz.X * 0.5f - 16f, rect.Y + rect.Height - 34f, sz.X + 32f, 24f);
+        VectorRenderer.DrawRoundedRect(ribbon, 0.5f, Paint(new Color(200, 76, 50, 245), isUnlocked), HanoiPalette.CartoonOutline, 1.5f, withShadow: false);
+        FontManager.Instance.DrawText(caption, new Vector2(ribbon.X + 16f, ribbon.Y + 5f), 13f, new Color(255, 248, 226, 255));
+    }
+
     private static void DrawHanoiIllustration(Rectangle rect, bool isUnlocked)
     {
-        Color sky = isUnlocked ? new Color(200, 230, 255, 255) : new Color(190, 195, 200, 255);
-        Raylib.DrawRectangleRounded(rect, 0.08f, 4, sky);
+        int x = (int)rect.X, y = (int)rect.Y, w = (int)rect.Width, h = (int)rect.Height;
+        float horizon = rect.Y + rect.Height * 0.58f;
 
-        Color river = isUnlocked ? new Color(120, 180, 220, 255) : new Color(130, 140, 145, 255);
-        Rectangle riverRect = new(rect.X, rect.Y + rect.Height * 0.65f, rect.Width, rect.Height * 0.35f);
-        Raylib.DrawRectangleRounded(riverRect, 0.08f, 4, river);
+        Raylib.BeginScissorMode(x, y, w, h);
+        // Golden-hour sky and sun
+        Raylib.DrawRectangleGradientV(x, y, w, (int)(horizon - y), Paint(new Color(120, 150, 200, 255), isUnlocked), Paint(new Color(255, 196, 140, 255), isUnlocked));
+        Vector2 sun = new(rect.X + rect.Width * 0.72f, horizon - 70f);
+        Raylib.DrawCircleV(sun, 46f, Raylib.ColorAlpha(Paint(new Color(255, 220, 150, 255), isUnlocked), 0.35f));
+        Raylib.DrawCircleV(sun, 26f, Paint(new Color(255, 238, 190, 255), isUnlocked));
 
-        Color bridgeCol = isUnlocked ? HanoiPalette.RustedIron : new Color(110, 100, 95, 255);
-        Raylib.DrawRectangle((int)(rect.X + 20f), (int)(rect.Y + rect.Height * 0.55f), (int)(rect.Width - 40f), 8, bridgeCol);
-        for (int i = 0; i < 6; i++)
+        // Distant city & banyan silhouettes on the far bank
+        Color far = Paint(new Color(150, 110, 120, 255), isUnlocked);
+        for (int i = 0; i < 9; i++)
         {
-            float tx = rect.X + 30f + i * (rect.Width - 60f) / 5f;
-            Raylib.DrawRectangle((int)tx, (int)(rect.Y + rect.Height * 0.3f), 5, (int)(rect.Height * 0.26f), bridgeCol);
+            int bw = 30 + (i * 37) % 26, bh = 18 + (i * 53) % 30;
+            Raylib.DrawRectangle(x + i * 48, (int)horizon - bh, bw, bh, far);
+        }
+        Raylib.DrawCircleV(new Vector2(rect.X + 60f, horizon - 22f), 28f, Paint(new Color(90, 120, 80, 255), isUnlocked));
+
+        // Red River
+        Raylib.DrawRectangleGradientV(x, (int)horizon, w, (int)(rect.Y + rect.Height - horizon), Paint(new Color(214, 160, 120, 255), isUnlocked), Paint(new Color(120, 104, 110, 255), isUnlocked));
+        Raylib.DrawRectangle((int)sun.X - 8, (int)horizon + 6, 16, 80, Raylib.ColorAlpha(Paint(new Color(255, 230, 180, 255), isUnlocked), 0.35f));
+
+        // Long Biên bridge in perspective: deck + cantilever truss spans
+        Color iron = Paint(HanoiPalette.RustedIron, isUnlocked);
+        float deckY = horizon - 4f;
+        Raylib.DrawLineEx(new Vector2(rect.X, deckY), new Vector2(rect.X + rect.Width, deckY - 26f), 5f, iron);
+        for (int s = 0; s < 4; s++)
+        {
+            float u0 = s / 4f, u1 = (s + 1) / 4f;
+            Vector2 a = new(rect.X + rect.Width * u0, deckY - 26f * u0);
+            Vector2 b = new(rect.X + rect.Width * u1, deckY - 26f * u1);
+            float height = 70f - s * 10f;
+            Vector2 apex = (a + b) * 0.5f + new Vector2(0f, -height);
+            Raylib.DrawLineEx(a, apex, 3.5f, iron);
+            Raylib.DrawLineEx(apex, b, 3.5f, iron);
+            for (int k = 1; k < 4; k++)
+            {
+                Vector2 onDeck = Vector2.Lerp(a, b, k / 4f);
+                Vector2 onChord = k <= 2 ? Vector2.Lerp(a, apex, k / 2f) : Vector2.Lerp(apex, b, (k - 2) / 2f);
+                Raylib.DrawLineEx(onDeck, onChord, 1.6f, iron);
+            }
+            // Pier into the water
+            Raylib.DrawRectangle((int)a.X - 5, (int)a.Y, 10, 46, Paint(new Color(110, 92, 84, 255), isUnlocked));
         }
 
+        // Foreground lotus pond with petals
+        float fy = rect.Y + rect.Height - 70f;
+        foreach (var (dx, r) in new[] { (60f, 26f), (170f, 20f), (300f, 24f), (380f, 16f) })
+        {
+            Raylib.DrawEllipse((int)(rect.X + dx), (int)fy, r, r * 0.38f, Paint(HanoiPalette.LotusLeafGreen, isUnlocked));
+        }
+        VectorRenderer.DrawCartoonCircle(new Vector2(rect.X + 70f, fy - 12f), 11f, Paint(HanoiPalette.LotusPink, isUnlocked), Paint(HanoiPalette.LotusRose, isUnlocked), 1.5f, withShadow: false);
+        VectorRenderer.DrawCartoonCircle(new Vector2(rect.X + 302f, fy - 10f), 9f, Paint(HanoiPalette.LotusWhite, isUnlocked), Paint(HanoiPalette.LotusPink, isUnlocked), 1.5f, withShadow: false);
+
+        // Bé Mây drifting over the river
         if (isUnlocked)
         {
-            float cx = rect.X + rect.Width / 2f;
-            VectorRenderer.DrawCartoonCircle(new Vector2(cx - 60f, rect.Y + rect.Height * 0.8f), 18f,
-                HanoiPalette.LotusPink, HanoiPalette.LotusRose, 1.5f, withShadow: false);
-            VectorRenderer.DrawCartoonCircle(new Vector2(cx + 50f, rect.Y + rect.Height * 0.82f), 14f,
-                HanoiPalette.LotusWhite, HanoiPalette.LotusPink, 1.5f, withShadow: false);
+            VectorRenderer.DrawBeMay(new Vector2(rect.X + rect.Width * 0.32f, horizon - 92f), FacingDirection.Right, 0f, false, 0.8f, withShadow: false);
         }
+        Raylib.EndScissorMode();
+
+        DrawPostcardFrame(rect, isUnlocked, "Cầu Long Biên · Hà Nội");
     }
 
     private static void DrawHueIllustration(Rectangle rect, bool isUnlocked)
     {
-        Color sky = isUnlocked ? new Color(245, 220, 190, 255) : new Color(185, 185, 190, 255);
-        Raylib.DrawRectangleRounded(rect, 0.08f, 4, sky);
-
-        // Perfume river
-        Color river = isUnlocked ? new Color(100, 160, 200, 255) : new Color(130, 135, 140, 255);
-        Rectangle riverRect = new(rect.X, rect.Y + rect.Height * 0.68f, rect.Width, rect.Height * 0.32f);
-        Raylib.DrawRectangleRounded(riverRect, 0.08f, 4, river);
-
-        // Ngo Mon Gate silhouette
-        Color gateCol = isUnlocked ? new Color(170, 70, 50, 255) : new Color(100, 100, 105, 255);
+        int x = (int)rect.X, y = (int)rect.Y, w = (int)rect.Width, h = (int)rect.Height;
+        float horizon = rect.Y + rect.Height * 0.62f;
         float cx = rect.X + rect.Width / 2f;
-        float baseH = rect.Y + rect.Height * 0.68f;
 
-        Raylib.DrawRectangle((int)cx - 70, (int)baseH - 45, 140, 45, gateCol);
-        Raylib.DrawRectangle((int)cx - 50, (int)baseH - 75, 100, 30, gateCol);
-        Raylib.DrawRectangle((int)cx - 20, (int)baseH - 30, 40, 30, isUnlocked ? new Color(240, 210, 160, 255) : new Color(150, 150, 155, 255));
+        Raylib.BeginScissorMode(x, y, w, h);
+        // Violet dusk sky with Ngự Bình mountain
+        Raylib.DrawRectangleGradientV(x, y, w, (int)(horizon - y), Paint(HuePalette.DuskSkyTop, isUnlocked), Paint(HuePalette.DuskSkyBottom, isUnlocked));
+        Raylib.DrawTriangle(new Vector2(rect.X - 20f, horizon - 40f), new Vector2(rect.X + 110f, horizon - 130f), new Vector2(rect.X + 240f, horizon - 40f), Paint(new Color(120, 78, 112, 220), isUnlocked));
+        Raylib.DrawTriangle(new Vector2(rect.X + 220f, horizon - 40f), new Vector2(rect.X + 360f, horizon - 120f), new Vector2(rect.X + rect.Width + 30f, horizon - 40f), Paint(new Color(100, 64, 96, 220), isUnlocked));
 
+        // Ngọ Môn: brick rampart, three gates, pavilion and curved golden roof
+        float baseY = horizon;
+        Color brick = Paint(HuePalette.ImperialRampartBrick, isUnlocked);
+        Raylib.DrawRectangle((int)cx - 150, (int)baseY - 70, 300, 70, brick);
+        Raylib.DrawRectangleLines((int)cx - 150, (int)baseY - 70, 300, 70, Paint(HuePalette.ImperialRampartTrim, isUnlocked));
+        foreach (var (gx, gw) in new[] { (cx - 80f, 34f), (cx, 42f), (cx + 80f, 34f) })
+        {
+            Raylib.DrawRectangleRounded(new Rectangle(gx - gw * 0.5f, baseY - 50f, gw, 50f), 0.5f, 6, new Color(44, 28, 24, 255));
+        }
+        Raylib.DrawRectangle((int)cx - 110, (int)baseY - 112, 220, 42, Paint(HuePalette.LacqueredPillarRed, isUnlocked));
+        for (float px = cx - 100f; px <= cx + 95f; px += 28f)
+        {
+            Raylib.DrawRectangle((int)px, (int)baseY - 108, 6, 38, Paint(HuePalette.LacqueredPillarDark, isUnlocked));
+        }
+        Color gold = Paint(HuePalette.RoyalGold, isUnlocked);
+        Raylib.DrawTriangle(new Vector2(cx, baseY - 150f), new Vector2(cx - 140f, baseY - 110f), new Vector2(cx + 140f, baseY - 110f), gold);
+        Raylib.DrawLineEx(new Vector2(cx - 140f, baseY - 110f), new Vector2(cx - 156f, baseY - 122f), 4f, gold);
+        Raylib.DrawLineEx(new Vector2(cx + 140f, baseY - 110f), new Vector2(cx + 156f, baseY - 122f), 4f, gold);
+        Raylib.DrawCircleV(new Vector2(cx, baseY - 152f), 4f, Paint(HuePalette.RoyalGlazedGreen, isUnlocked));
+
+        // Perfume River with lantern reflections
+        Raylib.DrawRectangleGradientV(x, (int)horizon, w, (int)(rect.Y + rect.Height - horizon), Paint(HuePalette.PerfumeRiverTeal, isUnlocked), Paint(HuePalette.PerfumeRiverDeep, isUnlocked));
+        for (int i = 0; i < 6; i++)
+        {
+            float lx = rect.X + 40f + i * 66f;
+            float ly = horizon + 30f + (i % 2) * 34f;
+            Raylib.DrawCircleV(new Vector2(lx, ly + 6f), 12f, Raylib.ColorAlpha(Paint(new Color(255, 210, 110, 255), isUnlocked), 0.25f));
+            Raylib.DrawCircleV(new Vector2(lx, ly), 6f, Paint(i % 2 == 0 ? HuePalette.LanternPaperPink : HuePalette.LanternPaperYellow, isUnlocked));
+            Raylib.DrawCircleV(new Vector2(lx, ly - 3f), 2f, Paint(HuePalette.LanternFlame, isUnlocked));
+        }
+        Raylib.EndScissorMode();
+
+        DrawPostcardFrame(rect, isUnlocked, "Ngọ Môn · Cố Đô Huế");
         if (!isUnlocked)
         {
-            DrawVectorPadlock(new Vector2(cx, baseH - 40f), 24f);
+            DrawVectorPadlock(new Vector2(cx, baseY - 60f), 24f);
         }
     }
 

@@ -50,7 +50,7 @@ public sealed class BunBoHueCookingEngine : IBunBoPuzzleEngine
     ];
 
     private readonly string?[] _slots = new string?[TotalSlots];
-    public IReadOnlyList<string?> CurrentSlots => _slots;
+    public IReadOnlyList<string?> CurrentSlots => Array.AsReadOnly(_slots);
     public bool IsSolved { get; private set; }
 
     public bool PlaceIngredient(int slotIndex, string ingredientId)
@@ -96,7 +96,7 @@ public sealed class BunBoHueCookingEngine : IBunBoPuzzleEngine
         {
             if (!ItemIds.AllBunBoIngredients.Contains(slot!))
             {
-                errorMessage = "Ôi chà! Nguyên liệu này không có trong danh sách chuẩn của Bún Bò Huế. Thử lại với các nguyên liệu đặc trưng khác của Huế xem sao Mây nhé!";
+                errorMessage = "Ôi chà! Nguyên liệu này không hợp lệ, không có trong danh sách chuẩn của Bún Bò Huế. Thử lại với các nguyên liệu đặc trưng khác của Huế xem sao Mây nhé!";
                 return false;
             }
         }
@@ -124,7 +124,7 @@ public sealed class BunBoHueCookingEngine : IBunBoPuzzleEngine
             }
             else
             {
-                errorMessage = "Xếp các lát bắp bò hoa tươi ngoqn đều lên trên lớp bún nhé Mây!";
+                errorMessage = "Xếp các lát bắp bò hoa tươi ngon đều lên trên lớp bún nhé Mây!";
             }
             return false;
         }

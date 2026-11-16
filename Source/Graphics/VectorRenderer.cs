@@ -743,9 +743,12 @@ public static class VectorRenderer
         // Signboard
         if (!string.IsNullOrEmpty(stallName))
         {
-            Rectangle signRec = new(pos.X - 30f * scale, pos.Y - 24f * scale, 60f * scale, 14f * scale);
+            // Sign grows with its label (min 60px) and stays centred on the stall so long names never spill out.
+            Vector2 textSz = FontManager.Instance.MeasureText(stallName, 10f * scale);
+            float signW = MathF.Max(60f * scale, textSz.X + 10f * scale);
+            Rectangle signRec = new(pos.X - signW * 0.5f, pos.Y - 24f * scale, signW, 14f * scale);
             DrawRoundedRect(signRec, 0.25f, HanoiPalette.WallYellow, HanoiPalette.CartoonOutline, 1f * scale, withShadow: false);
-            Vector2 textPos = new(signRec.X + 4f * scale, signRec.Y + 1f * scale);
+            Vector2 textPos = new(signRec.X + (signW - textSz.X) * 0.5f, signRec.Y + 1f * scale);
             FontManager.Instance.DrawText(stallName, textPos, 10f * scale, HanoiPalette.CartoonOutline);
         }
     }
@@ -777,6 +780,75 @@ public static class VectorRenderer
 
         // Text
         FontManager.Instance.DrawText(fullText, new Vector2(bubble.X + 8f, bubble.Y + 4f), 14f, border);
+    }
+
+    /// <summary>
+    /// Cooking-minigame modal panel styled as a street-kitchen counter: striped awning inside the
+    /// top edge, warm paper body, wood table surface across the lower band, corner lotus motifs
+    /// and hanging lantern glows in the dark backdrop. Panel geometry is untouched.
+    /// </summary>
+    public static void DrawKitchenModalPanel(Rectangle tray, float t, Color awning1, Color awning2, Color woodTone)
+    {
+        if (!Raylib.IsWindowReady()) return;
+
+        // Lantern glows floating in the dark backdrop around the panel
+        for (int i = 0; i < 5; i++)
+        {
+            float lx = 120f + i * 260f + MathF.Sin(t * 1.6f + i) * 6f;
+            float ly = (i % 2 == 0) ? 36f : 694f;
+            Raylib.DrawCircleV(new Vector2(lx, ly), 22f, Raylib.ColorAlpha(new Color(255, 185, 80, 255), 0.16f));
+            Raylib.DrawCircleV(new Vector2(lx, ly), 8f, Raylib.ColorAlpha(new Color(255, 120, 70, 255), 0.5f));
+        }
+
+        // Panel body
+        DrawRoundedRect(tray, 0.05f, new Color(252, 248, 235, 255), HanoiPalette.CartoonOutline, 2.5f);
+
+        // Striped awning across the inside top
+        // Thin awning band hugging the top edge (stays clear of the title at tray.Y + 15)
+        Rectangle awning = new(tray.X + 10f, tray.Y + 4f, tray.Width - 20f, 8f);
+        int stripes = (int)(awning.Width / 36f);
+        float sw = awning.Width / stripes;
+        for (int i = 0; i < stripes; i++)
+        {
+            Color sc = (i % 2 == 0) ? awning1 : awning2;
+            Raylib.DrawRectangleRec(new Rectangle(awning.X + sw * i, awning.Y, sw + 1f, awning.Height), sc);
+            // Small scalloped hem
+            Raylib.DrawCircleV(new Vector2(awning.X + sw * (i + 0.5f), awning.Y + awning.Height), sw * 0.5f > 7f ? 7f : sw * 0.5f, sc);
+        }
+
+        // Wood counter surface across the lower band (under the ingredient tray)
+        float woodH = tray.Height * 0.30f;
+        Rectangle wood = new(tray.X + 6f, tray.Y + tray.Height - woodH - 6f, tray.Width - 12f, woodH);
+        Raylib.DrawRectangleRounded(wood, 0.08f, 4, woodTone);
+        for (int y = (int)wood.Y + 12; y < wood.Y + wood.Height; y += 18)
+        {
+            Raylib.DrawLineEx(new Vector2(wood.X + 8f, y), new Vector2(wood.X + wood.Width - 8f, y), 1.2f, Raylib.ColorAlpha(Color.Black, 0.10f));
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            int h = ((i * 73856093) ^ 19349663) & 0x7fffffff;
+            float kx = wood.X + 40f + h % Math.Max(1, (int)wood.Width - 80);
+            float ky = wood.Y + 14f + (h / 7) % Math.Max(1, (int)wood.Height - 28);
+            Raylib.DrawEllipseLines((int)kx, (int)ky, 5f, 3f, Raylib.ColorAlpha(Color.Black, 0.14f));
+        }
+        Raylib.DrawRectangleRoundedLinesEx(wood, 0.08f, 4, 1.5f, Raylib.ColorAlpha(HanoiPalette.CartoonOutline, 0.45f));
+
+        // Corner lotus motifs
+        foreach (var (cx, cy) in new[]
+        {
+            (tray.X + 26f, tray.Y + 56f), (tray.X + tray.Width - 26f, tray.Y + 56f),
+        })
+        {
+            for (int p = 0; p < 5; p++)
+            {
+                float a = -MathF.PI / 2f + p * MathF.PI * 2f / 5f;
+                Raylib.DrawCircleV(new Vector2(cx + MathF.Cos(a) * 7f, cy + MathF.Sin(a) * 7f), 4.5f, Raylib.ColorAlpha(HanoiPalette.LotusPink, 0.65f));
+            }
+            Raylib.DrawCircleV(new Vector2(cx, cy), 3.5f, Raylib.ColorAlpha(new Color(255, 244, 214, 255), 0.9f));
+        }
+
+        // Thin double inner border for a menu-card feel
+        Raylib.DrawRectangleLinesEx(new Rectangle(tray.X + 14f, tray.Y + 40f, tray.Width - 28f, tray.Height - 54f), 1f, new Color(205, 180, 140, 150));
     }
 
     public static void DrawCloseCross(Vector2 center, float size, Color color, float thickness = 2.0f)

@@ -185,6 +185,42 @@ public class HueMinigameTests
     }
 
     [Fact]
+    public void CookingEngine_Step2NotBeef_ReturnsFallbackGuidance()
+    {
+        var engine = new BunBoHueCookingEngine();
+
+        engine.PlaceIngredient(0, ItemIds.BunSoiTo);
+        engine.PlaceIngredient(1, ItemIds.RauSongHue); // Neither beef shank nor crab cake
+        engine.PlaceIngredient(2, ItemIds.ChaCua);
+        engine.PlaceIngredient(3, ItemIds.BapBo);
+        engine.PlaceIngredient(4, ItemIds.NuocDungHue);
+
+        bool success = engine.ValidateAssembly(out string error);
+
+        Assert.False(success);
+        Assert.Contains("bắp bò hoa tươi ngon", error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(engine.IsSolved);
+    }
+
+    [Fact]
+    public void CookingEngine_CurrentSlots_IsEncapsulatedReadOnlyCollection()
+    {
+        var engine = new BunBoHueCookingEngine();
+        engine.PlaceIngredient(0, ItemIds.BunSoiTo);
+
+        // Verification 1: CurrentSlots is encapsulated, not the raw mutable array
+        Assert.False(engine.CurrentSlots is string?[]);
+
+        // Verification 2: Attempting to mutate via IList interface throws NotSupportedException
+        var list = engine.CurrentSlots as IList<string?>;
+        Assert.NotNull(list);
+        Assert.Throws<NotSupportedException>(() => list[0] = "Malicious_Override");
+
+        // Verification 3: Internal engine slot remains untouched
+        Assert.Equal(ItemIds.BunSoiTo, engine.CurrentSlots[0]);
+    }
+
+    [Fact]
     public void CookingEngine_ResetPuzzle_ClearsAllSlotsAndSolvedFlag()
     {
         var engine = new BunBoHueCookingEngine();
@@ -219,35 +255,42 @@ public class HueMinigameTests
     }
 
     [Fact]
-    public void RiverEngine_FlowerRaft_CanOnlyMoveVertically()
+    public void RiverEngine_DragonBoat_CanOnlyMoveVertically()
     {
         var grid = new HoaDangRiverEngine();
 
-        // Raft is at x=2, y=1 (size 1x2, occupies y=1 and y=2)
+        // Royal Dragon Boat is at x=2, y=1 (size 1x2, occupies (2, 1) and (2, 2))
+        // CanPushHorizontally = false, CanPushVertically = true
         // Horizontal moves must fail
-        Assert.False(grid.PushObject("Obj_FlowerRaft", Direction.Left));
-        Assert.False(grid.PushObject("Obj_FlowerRaft", Direction.Right));
+        Assert.False(grid.PushObject("Obj_DragonBoat_1", Direction.Left));
+        Assert.False(grid.PushObject("Obj_DragonBoat_1", Direction.Right));
+        Assert.False(grid.PushObject("Obj_DragonBoat", Direction.Left));
+        Assert.False(grid.PushObject("Obj_DragonBoat", Direction.Right));
 
-        // Pushing DOWN fails while Fisher Sampan occupies (2, 3)
-        Assert.False(grid.PushObject("Obj_FlowerRaft", Direction.Down));
+        // Pushing DOWN fails while Fruit Boat / Fisher Sampan occupies (2, 3)
+        Assert.False(grid.PushObject("Obj_DragonBoat_1", Direction.Down));
 
-        // Move Fisher Sampan Left out of cell (2, 3)
-        Assert.True(grid.PushObject("Obj_FisherSampan", Direction.Left));
+        // Move Fruit Boat Left out of cell (2, 3)
+        Assert.True(grid.PushObject("Obj_FruitBoat_1", Direction.Left));
 
         // Now vertical push DOWN into free cell (y=2) succeeds
-        Assert.True(grid.PushObject("Obj_FlowerRaft", Direction.Down));
-        var raft = grid.Entities.First(e => HoaDangRiverEngine.MatchesId(e.Id, "Obj_FlowerRaft"));
-        Assert.Equal(2, raft.Y);
+        Assert.True(grid.PushObject("Obj_DragonBoat_1", Direction.Down));
+        var boat = grid.Entities.First(e => HoaDangRiverEngine.MatchesId(e.Id, "Obj_DragonBoat"));
+        Assert.Equal(2, boat.Y);
     }
 
     [Fact]
-    public void RiverEngine_DragonBoat_CanOnlyMoveHorizontally()
+    public void RiverEngine_FlowerRaft_CanOnlyMoveHorizontally()
     {
         var grid = new HoaDangRiverEngine();
 
-        // Royal Dragon Boat at x=3, y=2 (size 2x1)
-        Assert.False(grid.PushObject("Obj_DragonBoat", Direction.Up));
-        Assert.False(grid.PushObject("Obj_DragonBoat", Direction.Down));
+        // Flower Raft is at x=3, y=2 (size 2x1, occupies (3, 2) and (4, 2))
+        // CanPushHorizontally = true, CanPushVertically = false
+        // Vertical moves must fail
+        Assert.False(grid.PushObject("Obj_FlowerRaft_1", Direction.Up));
+        Assert.False(grid.PushObject("Obj_FlowerRaft_1", Direction.Down));
+        Assert.False(grid.PushObject("Obj_FlowerRaft", Direction.Up));
+        Assert.False(grid.PushObject("Obj_FlowerRaft", Direction.Down));
     }
 
     [Fact]
@@ -255,11 +298,11 @@ public class HueMinigameTests
     {
         var grid = new HoaDangRiverEngine();
 
-        // Top stone pier embankment is at y=0. Pushing Flower Raft UP into pier must fail
-        Assert.False(grid.PushObject("Obj_FlowerRaft", Direction.Up));
+        // Top stone pier embankment is at y=0. Pushing Dragon Boat UP into pier must fail
+        Assert.False(grid.PushObject("Obj_DragonBoat_1", Direction.Up));
 
         // Bottom stone pier embankment is at y=4. Pushing Fisher Sampan DOWN must fail
-        Assert.False(grid.PushObject("Obj_FisherSampan", Direction.Down));
+        Assert.False(grid.PushObject("Obj_FruitBoat_1", Direction.Down));
     }
 
     [Fact]
@@ -268,12 +311,12 @@ public class HueMinigameTests
         var grid = new HoaDangRiverEngine();
         Assert.False(grid.IsPathClear());
 
-        // Step 1: Push Fisher Sampan (1x1 at x=2, y=3) LEFT to (1, 3)
-        bool m1 = grid.PushObject("Obj_FisherSampan", Direction.Left);
+        // Step 1: Push Fruit Boat / Fisher Sampan (1x1 at x=2, y=3) LEFT to (1, 3)
+        bool m1 = grid.PushObject("Obj_FruitBoat_1", Direction.Left);
         Assert.True(m1);
 
-        // Step 2: Push Flower Raft (1x2 at x=2, y=1) DOWN to y=2
-        bool m2 = grid.PushObject("Obj_FlowerRaft", Direction.Down);
+        // Step 2: Push Dragon Boat (1x2 at x=2, y=1) DOWN to y=2
+        bool m2 = grid.PushObject("Obj_DragonBoat_1", Direction.Down);
         Assert.True(m2);
 
         // Continuous path from Citadel Pier (0, 2) to Sacred Waters (6, 2) is now open!
@@ -295,20 +338,61 @@ public class HueMinigameTests
     }
 
     [Fact]
+    public void RiverEngine_NullAndEmptyInputs_ReturnFalseGracefully()
+    {
+        var grid = new HoaDangRiverEngine();
+
+        // PushObject with null, empty, or whitespace objectId returns false without throwing
+        Assert.False(grid.PushObject(null!, Direction.Up));
+        Assert.False(grid.PushObject("", Direction.Up));
+        Assert.False(grid.PushObject("   ", Direction.Down));
+
+        // MatchesId with null, empty, or whitespace inputs returns false without throwing
+        Assert.False(HoaDangRiverEngine.MatchesId(null!, "Obj_DragonBoat"));
+        Assert.False(HoaDangRiverEngine.MatchesId("Obj_DragonBoat", null!));
+        Assert.False(HoaDangRiverEngine.MatchesId(null!, null!));
+        Assert.False(HoaDangRiverEngine.MatchesId("", "Obj_DragonBoat"));
+        Assert.False(HoaDangRiverEngine.MatchesId("Obj_DragonBoat", ""));
+        Assert.False(HoaDangRiverEngine.MatchesId("", ""));
+        Assert.False(HoaDangRiverEngine.MatchesId("   ", "   "));
+    }
+
+    [Fact]
+    public void RiverEngine_UntangledAliases_MatchCorrectEntitiesStrictly()
+    {
+        Assert.True(HoaDangRiverEngine.MatchesId("Obj_DragonBoat_1", "Obj_DragonBoat"));
+        Assert.True(HoaDangRiverEngine.MatchesId("Obj_DragonBoat", "Obj_DragonBoat_1"));
+        Assert.True(HoaDangRiverEngine.MatchesId("Obj_FlowerRaft_1", "Obj_FlowerRaft"));
+        Assert.True(HoaDangRiverEngine.MatchesId("Obj_FlowerRaft", "Obj_FlowerRaft_1"));
+        Assert.True(HoaDangRiverEngine.MatchesId("Obj_FruitBoat_1", "Obj_FisherSampan"));
+        Assert.True(HoaDangRiverEngine.MatchesId("Obj_LotusCluster_1", "Obj_WaterLilyPatch"));
+
+        // Cross-aliasing strictly rejected
+        Assert.False(HoaDangRiverEngine.MatchesId("Obj_DragonBoat_1", "Obj_FlowerRaft"));
+        Assert.False(HoaDangRiverEngine.MatchesId("Obj_FlowerRaft_1", "Obj_DragonBoat"));
+        Assert.False(HoaDangRiverEngine.MatchesId("Obj_FruitBoat_1", "Obj_DragonBoat"));
+        Assert.False(HoaDangRiverEngine.MatchesId("Obj_LotusCluster_1", "Obj_FlowerRaft"));
+    }
+
+    [Fact]
     public void RiverEngine_ResetGrid_RestoresStartingCoordinates()
     {
         var grid = new HoaDangRiverEngine();
 
-        grid.PushObject("Obj_FisherSampan", Direction.Left);
-        grid.PushObject("Obj_FlowerRaft", Direction.Down);
+        grid.PushObject("Obj_FruitBoat_1", Direction.Left);
+        grid.PushObject("Obj_DragonBoat_1", Direction.Down);
         Assert.True(grid.IsPathClear());
 
         grid.ResetGrid();
 
         Assert.False(grid.IsPathClear());
-        var sampan = grid.Entities.First(e => HoaDangRiverEngine.MatchesId(e.Id, "Obj_FisherSampan"));
+        var sampan = grid.Entities.First(e => HoaDangRiverEngine.MatchesId(e.Id, "Obj_FruitBoat_1"));
         Assert.Equal(2, sampan.X);
         Assert.Equal(3, sampan.Y);
+
+        var boat = grid.Entities.First(e => HoaDangRiverEngine.MatchesId(e.Id, "Obj_DragonBoat_1"));
+        Assert.Equal(2, boat.X);
+        Assert.Equal(1, boat.Y);
     }
 
     #endregion
@@ -427,7 +511,7 @@ public class HueMinigameTests
         Assert.Equal(1, scene.MoveCount);
         Assert.False(scene.IsSolved);
 
-        bool m2 = scene.Push("Obj_FlowerRaft", Direction.Down);
+        bool m2 = scene.Push("Obj_DragonBoat_1", Direction.Down);
         Assert.True(m2);
         Assert.Equal(2, scene.MoveCount);
 

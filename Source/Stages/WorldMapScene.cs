@@ -259,25 +259,55 @@ public sealed class WorldMapScene : IScene
 
     private void DrawParchmentSeaChartBackground()
     {
-        // 1. Vintage parchment paper gradient (#F5ECD7 to #EBDDBF)
+        // 1. Painted ocean on aged parchment: teal wash deepening toward the south
         for (int y = 0; y < 720; y += 4)
         {
             float t = y / 720f;
-            byte r = (byte)(245 + (233 - 245) * t);
-            byte g = (byte)(236 + (221 - 236) * t);
-            byte b = (byte)(215 + (191 - 215) * t);
+            byte r = (byte)(176 + (128 - 176) * t);
+            byte g = (byte)(205 + (168 - 205) * t);
+            byte b = (byte)(203 + (178 - 203) * t);
             Raylib.DrawRectangle(0, y, 1280, 4, new Color((int)r, (int)g, (int)b, 255));
         }
+        // Warm parchment glaze so the sea still reads as an old chart
+        Raylib.DrawRectangle(0, 0, 1280, 720, new Color(244, 228, 190, 46));
 
-        // 2. Subtle parchment texture lines
-        for (int x = 20; x < 1260; x += 32)
+        // 2. Faint chart graticule (lat/long)
+        Color grid = new(90, 115, 120, 26);
+        for (int x = 80; x < 1280; x += 110) Raylib.DrawLineEx(new Vector2(x, 0), new Vector2(x, 720), 1.0f, grid);
+        for (int y = 90; y < 720; y += 110) Raylib.DrawLineEx(new Vector2(0, y), new Vector2(1280, y), 1.0f, grid);
+
+        // 3. Drifting wave strokes
+        for (int i = 0; i < 26; i++)
         {
-            Raylib.DrawLineEx(new Vector2(x, 0), new Vector2(x, 720), 1.0f, new Color(220, 205, 175, 20));
+            int h = ((i * 73856093) ^ 19349663) & 0x7fffffff;
+            float wx = 40f + h % 760;
+            float wy = 95f + (h / 7) % 580;
+            float ph = MathF.Sin(_totalTime * 1.2f + i) * 2f;
+            Color wc = new(235, 245, 240, 70);
+            Raylib.DrawLineEx(new Vector2(wx - 9f, wy + ph), new Vector2(wx - 2f, wy - 3f + ph), 1.4f, wc);
+            Raylib.DrawLineEx(new Vector2(wx - 2f, wy - 3f + ph), new Vector2(wx + 5f, wy + ph), 1.4f, wc);
         }
 
-        // 3. Aged vignette border
-        Raylib.DrawRectangleLinesEx(new Rectangle(0, 0, 1280, 720), 12f, new Color(175, 145, 105, 75));
-        Raylib.DrawRectangleLinesEx(new Rectangle(12, 12, 1256, 696), 2f, new Color(135, 105, 70, 110));
+        // 4. Aged vignette border with gold inner trim
+        Raylib.DrawRectangleLinesEx(new Rectangle(0, 0, 1280, 720), 14f, new Color(121, 88, 56, 255));
+        Raylib.DrawRectangleLinesEx(new Rectangle(10, 10, 1260, 700), 3f, new Color(171, 134, 88, 255));
+        Raylib.DrawRectangleLinesEx(new Rectangle(17, 17, 1246, 686), 1.5f, new Color(222, 186, 110, 190));
+        // Corner diamonds
+        foreach (var (cx, cy) in new[] { (17f, 17f), (1263f, 17f), (17f, 703f), (1263f, 703f) })
+        {
+            VectorRenderer.DrawFivePointStar(new Vector2(cx, cy), 9f, new Color(222, 186, 110, 230));
+        }
+    }
+
+    /// Hand-painted blob-chain landmass: border halo pass, fill pass, then sun-lit highlight pass.
+    private static void DrawBlobLand(Color fill, Color border, params (float X, float Y, float R)[] blobs)
+    {
+        foreach (var b in blobs) Raylib.DrawCircleV(new Vector2(b.X, b.Y), b.R + 3.5f, border);
+        foreach (var b in blobs) Raylib.DrawCircleV(new Vector2(b.X, b.Y), b.R, fill);
+        foreach (var b in blobs)
+        {
+            Raylib.DrawCircleV(new Vector2(b.X - b.R * 0.25f, b.Y - b.R * 0.3f), b.R * 0.55f, Raylib.ColorAlpha(Color.White, 0.10f));
+        }
     }
 
     private void DrawNavigationalRhumbLines()
@@ -285,7 +315,7 @@ public sealed class WorldMapScene : IScene
         // Faint criss-crossing sea chart lines radiating from nautical nodes
         Vector2 hub1 = new(115f, 235f);
         Vector2 hub2 = new(660f, 320f);
-        Color lineColor = new(185, 155, 120, 36);
+        Color lineColor = new(240, 248, 245, 30);
 
         for (int angleDeg = 0; angleDeg < 360; angleDeg += 30)
         {
@@ -346,49 +376,106 @@ public sealed class WorldMapScene : IScene
 
     private void DrawContinentsAndLands()
     {
-        Color landWash = new(218, 204, 178, 215);
-        Color landBorder = new(155, 125, 90, 190);
+        Color landWash = new(221, 203, 160, 255);
+        Color landBorder = new(146, 115, 78, 255);
 
         // Europe / Paris landmass
-        VectorRenderer.DrawRoundedRect(new Rectangle(190f, 145f, 110f, 90f), 0.4f, landWash, landBorder, 1.2f, withShadow: false);
+        DrawBlobLand(landWash, landBorder,
+            (205f, 172f, 30f), (243f, 162f, 26f), (272f, 186f, 24f), (232f, 202f, 28f), (200f, 212f, 20f));
         // Egypt / Cairo landmass
-        VectorRenderer.DrawRoundedRect(new Rectangle(285f, 265f, 100f, 105f), 0.35f, landWash, landBorder, 1.2f, withShadow: false);
+        DrawBlobLand(new Color(228, 199, 142, 255), landBorder,
+            (322f, 282f, 30f), (348f, 302f, 30f), (330f, 334f, 30f), (310f, 362f, 24f), (348f, 356f, 20f));
         // South America / Rio landmass
-        VectorRenderer.DrawRoundedRect(new Rectangle(125f, 360f, 95f, 110f), 0.45f, landWash, landBorder, 1.2f, withShadow: false);
+        DrawBlobLand(new Color(188, 205, 150, 255), new Color(112, 128, 78, 255),
+            (162f, 380f, 26f), (176f, 406f, 29f), (162f, 436f, 25f), (150f, 462f, 18f));
         // Arctic ice shelf (North)
-        VectorRenderer.DrawRoundedRect(new Rectangle(360f, 85f, 170f, 65f), 0.5f, new Color(230, 238, 245, 230), new Color(130, 160, 190, 180), 1.2f, withShadow: false);
+        DrawBlobLand(new Color(235, 243, 248, 255), new Color(142, 170, 198, 255),
+            (382f, 112f, 24f), (420f, 102f, 28f), (458f, 108f, 26f), (498f, 112f, 22f), (528f, 118f, 16f));
         // Japan / Kyoto island arc
-        VectorRenderer.DrawRoundedRect(new Rectangle(645f, 175f, 65f, 95f), 0.5f, landWash, landBorder, 1.2f, withShadow: false);
+        DrawBlobLand(new Color(226, 190, 170, 255), new Color(150, 100, 84, 255),
+            (662f, 182f, 13f), (672f, 203f, 15f), (668f, 226f, 13f), (657f, 246f, 10f));
         // Mythical Sky Realm / Bầu Trời Ký Ức floating cloud land
-        VectorRenderer.DrawRoundedRect(new Rectangle(595f, 395f, 125f, 85f), 0.55f, new Color(248, 242, 224, 230), new Color(212, 175, 55, 180), 1.5f, withShadow: false);
+        DrawBlobLand(new Color(250, 242, 218, 255), new Color(212, 175, 55, 255),
+            (622f, 436f, 23f), (655f, 426f, 29f), (690f, 440f, 23f), (662f, 456f, 21f));
 
-        // Vietnam silhouette
+        // Vietnam: organic S-curve blob chain through all four regions
         float hanoiColor = _saveData.WorldProgression.GetColorRestoration("Hanoi");
-        Color vnLand = HanoiPalette.ApplyDesaturation(new Color(175, 195, 145, 255), hanoiColor * 0.4f + 35f);
-        Color vnBorder = new(100, 125, 80, 240);
+        Color vnLand = HanoiPalette.ApplyDesaturation(new Color(167, 196, 128, 255), hanoiColor * 0.4f + 35f);
+        Color vnBorder = new(96, 122, 72, 255);
+        DrawBlobLand(vnLand, vnBorder,
+            (468f, 205f, 27f), (487f, 236f, 24f), (500f, 270f, 22f), (506f, 310f, 22f),
+            (526f, 346f, 22f), (556f, 382f, 22f), (540f, 416f, 22f), (508f, 446f, 23f), (492f, 468f, 19f));
+        // Red River & Mekong delta hints
+        Raylib.DrawLineEx(new Vector2(458f, 196f), new Vector2(480f, 212f), 2f, new Color(104, 150, 182, 220));
+        Raylib.DrawLineEx(new Vector2(486f, 474f), new Vector2(510f, 462f), 2f, new Color(104, 150, 182, 220));
 
-        // Northern (Hanoi)
-        VectorRenderer.DrawRoundedRect(new Rectangle(445f, 190f, 90f, 85f), 0.38f, vnLand, vnBorder, 1.3f, withShadow: false);
-        // Central (Hue, HoiAn)
-        VectorRenderer.DrawRoundedRect(new Rectangle(485f, 280f, 105f, 120f), 0.32f, vnLand, vnBorder, 1.3f, withShadow: false);
-        // Southern (SaiGon)
-        VectorRenderer.DrawRoundedRect(new Rectangle(460f, 420f, 85f, 75f), 0.4f, vnLand, vnBorder, 1.3f, withShadow: false);
+        // Terrain doodles: mountains & palms
+        DrawMiniMountain(new Vector2(228f, 178f));
+        DrawMiniMountain(new Vector2(472f, 214f));
+        DrawMiniMountain(new Vector2(664f, 196f));
+        DrawMiniPalm(new Vector2(330f, 318f));
+        DrawMiniPalm(new Vector2(168f, 416f));
 
-        // Biển Đông & gentle ocean waves
-        Color seaText = new(110, 140, 160, 210);
-        FontManager.Instance.DrawText("Biển Đông", new Vector2(560f, 305f), 14f, seaText);
-        for (int i = 0; i < 5; i++)
+        // Biển Đông label & name of the chart sea
+        Color seaText = new(62, 96, 110, 220);
+        FontManager.Instance.DrawText("Biển Đông", new Vector2(596f, 326f), 14f, seaText);
+
+        // Sailing ship & whale doodles in open water
+        DrawSailingShip(new Vector2(756f, 556f));
+        DrawWhale(new Vector2(320f, 548f));
+    }
+
+    private static void DrawMiniMountain(Vector2 p)
+    {
+        Color rock = new(134, 112, 82, 235);
+        Raylib.DrawTriangle(new Vector2(p.X, p.Y - 10f), new Vector2(p.X - 10f, p.Y + 5f), new Vector2(p.X + 10f, p.Y + 5f), rock);
+        Raylib.DrawTriangle(new Vector2(p.X, p.Y - 10f), new Vector2(p.X - 3f, p.Y - 5f), new Vector2(p.X + 3f, p.Y - 5f), new Color(246, 244, 238, 255));
+        Raylib.DrawTriangle(new Vector2(p.X + 11f, p.Y - 5f), new Vector2(p.X + 3f, p.Y + 5f), new Vector2(p.X + 17f, p.Y + 5f), Raylib.ColorAlpha(rock, 0.8f));
+    }
+
+    private static void DrawMiniPalm(Vector2 p)
+    {
+        Raylib.DrawLineEx(p, p + new Vector2(2f, -11f), 2f, new Color(122, 86, 56, 255));
+        Color leaf = new(62, 124, 70, 255);
+        foreach (float a in new[] { -2.6f, -2.0f, -1.1f, -0.5f })
         {
-            float wx = 550f + i * 22f;
-            float wy = 330f + MathF.Sin(_totalTime * 1.5f + i * 0.8f) * 3f;
-            Raylib.DrawCircleV(new Vector2(wx, wy), 2f, Raylib.ColorAlpha(seaText, 0.6f));
+            Vector2 tip = p + new Vector2(2f, -11f) + new Vector2(MathF.Cos(a) * 9f, MathF.Sin(a) * 6f);
+            Raylib.DrawLineEx(p + new Vector2(2f, -11f), tip, 2f, leaf);
         }
+    }
+
+    private void DrawSailingShip(Vector2 p)
+    {
+        float bob = MathF.Sin(_totalTime * 1.6f) * 2.5f;
+        p.Y += bob;
+        Color hull = new(118, 82, 54, 255);
+        Raylib.DrawTriangle(new Vector2(p.X - 16f, p.Y), new Vector2(p.X - 10f, p.Y + 8f), new Vector2(p.X + 16f, p.Y), hull);
+        Raylib.DrawTriangle(new Vector2(p.X - 10f, p.Y + 8f), new Vector2(p.X + 10f, p.Y + 8f), new Vector2(p.X + 16f, p.Y), hull);
+        Raylib.DrawLineEx(new Vector2(p.X, p.Y), new Vector2(p.X, p.Y - 20f), 2f, HanoiPalette.CartoonOutline);
+        Raylib.DrawTriangle(new Vector2(p.X + 1f, p.Y - 20f), new Vector2(p.X + 1f, p.Y - 4f), new Vector2(p.X + 13f, p.Y - 7f), new Color(246, 238, 216, 255));
+        Raylib.DrawTriangle(new Vector2(p.X - 1f, p.Y - 18f), new Vector2(p.X - 11f, p.Y - 5f), new Vector2(p.X - 1f, p.Y - 4f), new Color(226, 102, 80, 255));
+        Raylib.DrawLineEx(new Vector2(p.X - 22f, p.Y + 10f), new Vector2(p.X + 22f, p.Y + 10f), 1.5f, new Color(235, 245, 240, 120));
+    }
+
+    private void DrawWhale(Vector2 p)
+    {
+        float bob = MathF.Sin(_totalTime * 1.3f + 2f) * 2f;
+        p.Y += bob;
+        Color body = new(96, 128, 150, 235);
+        Raylib.DrawEllipse((int)p.X, (int)p.Y, 16f, 8f, body);
+        Raylib.DrawTriangle(new Vector2(p.X - 14f, p.Y - 2f), new Vector2(p.X - 24f, p.Y - 8f), new Vector2(p.X - 20f, p.Y + 2f), body);
+        Raylib.DrawCircleV(new Vector2(p.X + 9f, p.Y - 2f), 1.4f, new Color(30, 42, 52, 255));
+        // Spout
+        float sp = 0.5f + 0.5f * MathF.Sin(_totalTime * 2.2f);
+        Raylib.DrawCircleV(new Vector2(p.X + 4f, p.Y - 12f - sp * 3f), 2f, new Color(235, 245, 250, 170));
+        Raylib.DrawCircleV(new Vector2(p.X + 1f, p.Y - 16f - sp * 4f), 1.5f, new Color(235, 245, 250, 140));
+        Raylib.DrawCircleV(new Vector2(p.X + 7f, p.Y - 16f - sp * 4f), 1.5f, new Color(235, 245, 250, 140));
     }
 
     private void DrawArchipelagos()
     {
         Color islandColor = new(140, 175, 120, 255);
-        Color seaColor = new(115, 145, 165, 210);
+        Color seaColor = new(50, 82, 96, 230);
 
         // Hoàng Sa
         Vector2 hoangSa = new(615f, 285f);
@@ -590,12 +677,17 @@ public sealed class WorldMapScene : IScene
 
         string title = "Hải Đồ Du Ký 7 Kỳ Quan Thế Giới";
         Vector2 sz = FontManager.Instance.MeasureText(title, 28f);
+        // Ribbon banner behind the title
+        Rectangle ribbon = new(440f - sz.X / 2f - 26f, 10f, sz.X + 52f, 40f);
+        VectorRenderer.DrawRoundedRect(ribbon, 0.5f, new Color(121, 88, 56, 235), new Color(74, 52, 32, 255), 2f);
+        Raylib.DrawTriangle(new Vector2(ribbon.X - 12f, ribbon.Y + 6f), new Vector2(ribbon.X - 12f, ribbon.Y + 34f), new Vector2(ribbon.X + 8f, ribbon.Y + 20f), new Color(90, 62, 38, 255));
+        Raylib.DrawTriangle(new Vector2(ribbon.X + ribbon.Width + 12f, ribbon.Y + 6f), new Vector2(ribbon.X + ribbon.Width - 8f, ribbon.Y + 20f), new Vector2(ribbon.X + ribbon.Width + 12f, ribbon.Y + 34f), new Color(90, 62, 38, 255));
         FontManager.Instance.DrawTextOutline(title, new Vector2(440f - sz.X / 2f, 14f), 28f,
             new Color(255, 225, 75, 255), new Color(90, 60, 30, 255), 2.5f);
 
         string sub = "Sử dụng [W/S / Mũi tên] hoặc chuột để chọn kỳ quan  ·  [Enter] Du hành  ·  [Tab] Sổ Ký Ức";
         Vector2 subSz = FontManager.Instance.MeasureText(sub, 12f);
-        FontManager.Instance.DrawText(sub, new Vector2(440f - subSz.X / 2f, 44f), 12f, new Color(75, 55, 35, 220));
+        FontManager.Instance.DrawTextOutline(sub, new Vector2(440f - subSz.X / 2f, 52f), 12f, new Color(252, 246, 228, 245), new Color(60, 70, 66, 170), 1.2f);
     }
 
     private void DrawPreviewCard()
@@ -772,8 +864,8 @@ public sealed class WorldMapScene : IScene
         int stampsCount = _saveData.CollectionAlbum.CollectedStamps.Count;
         string info = $"Sổ Ký Ức: {pagesCount}/2 Trang  ·  Tem: {stampsCount}/4 Tem";
         Vector2 infoSz = FontManager.Instance.MeasureText(info, 12f);
-        FontManager.Instance.DrawText(info, new Vector2(440f - infoSz.X / 2f, 66f), 12f,
-            new Color(75, 55, 40, 210));
+        FontManager.Instance.DrawTextOutline(info, new Vector2(440f - infoSz.X / 2f, 72f), 12f,
+            new Color(252, 246, 228, 235), new Color(60, 70, 66, 160), 1.2f);
     }
 
     private static void DrawWrappedText(string text, Vector2 origin, float size, float maxWidth, Color color)

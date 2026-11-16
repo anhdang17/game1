@@ -58,6 +58,28 @@ public static class Program
             }
             Raylib.TakeScreenshot("stall_puzzle_screenshot.png");
 
+            // Remaining scenes, captured into shots/ for visual review
+            System.IO.Directory.CreateDirectory("shots");
+            void Capture(IScene scene, string file)
+            {
+                sceneManager.SwitchScene(scene);
+                for (int f = 0; f < 30; f++)
+                {
+                    sceneManager.Update(0.016f);
+                    Raylib.BeginDrawing();
+                    Raylib.ClearBackground(Color.Black);
+                    sceneManager.Draw();
+                    Raylib.EndDrawing();
+                }
+                Raylib.TakeScreenshot(System.IO.Path.Combine("shots", file));
+            }
+            Capture(new WorldMapScene(saveData, eventBus, inputService), "worldmap.png");
+            Capture(new HueExplorationScene(saveData, audioService, inputService, eventBus), "hue.png");
+            Capture(new PhoAssemblyScene(saveData, explorationScene.QuestManager, eventBus, audioService, inputService), "pho.png");
+            Capture(new HoaDangRiverScene(saveData, explorationScene.QuestManager, eventBus, audioService, inputService), "hoadang.png");
+            Capture(new BunBoHueAssemblyScene(saveData, explorationScene.QuestManager, eventBus, audioService, inputService), "bunbo.png");
+            Capture(new AlbumViewerScene(saveData, eventBus, inputService), "album.png");
+
             sceneManager.Dispose();
             FontManager.Instance.Dispose();
             VectorRenderer.UnloadStallTextures();

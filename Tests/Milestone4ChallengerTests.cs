@@ -14,6 +14,9 @@ using GameProject.Core.State;
 using GameProject.Stages;
 using GameProject.UI;
 using Xunit;
+using NullAudioService = GameProject.Tests.Mocks.NullAudioService;
+using MockInputService = GameProject.Tests.Mocks.MockInputService;
+using MockSaveStorage = GameProject.Tests.Mocks.MockSaveStorage;
 
 namespace GameProject.Tests;
 

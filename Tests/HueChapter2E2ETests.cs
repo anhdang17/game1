@@ -7,9 +7,11 @@ using System.Text.Json;
 using GameProject.Core.Album;
 using GameProject.Core.Dialogue;
 using GameProject.Core.Events;
+using GameProject.Core.Interactions;
 using GameProject.Core.Models;
 using GameProject.Core.Movement;
 using GameProject.Core.Persistence;
+using GameProject.Core.Ports;
 using GameProject.Core.Puzzles;
 using GameProject.Core.Quests;
 using GameProject.Core.Spatial;
@@ -17,6 +19,9 @@ using GameProject.Core.WorldMap;
 using GameProject.Stages;
 using GameProject.Tests.Mocks;
 using Xunit;
+using NullAudioService = GameProject.Tests.Mocks.NullAudioService;
+using MockInputService = GameProject.Tests.Mocks.MockInputService;
+using MockSaveStorage = GameProject.Tests.Mocks.MockSaveStorage;
 
 namespace GameProject.Tests;
 
@@ -40,6 +45,26 @@ public sealed class HueChapter2E2ETests
         if (File.Exists("Data/dialogues_hue.json")) return "Data/dialogues_hue.json";
         if (File.Exists("Source/Data/dialogues_hue.json")) return "Source/Data/dialogues_hue.json";
         return "../../../Source/Data/dialogues_hue.json";
+    }
+
+    private sealed class TestInteractable : IInteractable
+    {
+        public string Id { get; init; } = "";
+        public string DisplayName { get; init; } = "";
+        public Vector2 Position { get; init; }
+        public Vector2 InteractionCenter => Position;
+        public float InteractionRadius { get; init; } = InteractionManager.DefaultEnterRadius;
+        public float VisualHeight { get; init; } = 40.0f;
+        public bool CanInteractValue { get; set; } = true;
+
+        public bool CanInteract(InteractionContext context) => CanInteractValue;
+
+        public InteractionResult Interact(InteractionContext context)
+        {
+            return new InteractionResult(true, DisplayName, "Interacted with " + DisplayName);
+        }
+
+        public string GetPromptText(InteractionContext context) => "[E] Tương tác";
     }
 
     #region Tier 1: Feature Coverage (R1 - R5)
@@ -152,31 +177,94 @@ public sealed class HueChapter2E2ETests
     [Fact]
     public void TC_T1_R1_05_HueExplorationScene_InteractiveTriggers_DetectProximityForLandmarksAndNPCs()
     {
-        var meBichPos = new Vector2(350f, 450f);
-        float interactionRadius = 48.0f;
+        var data = SaveData.CreateDefault();
+        var bus = new EventBus();
+        var qm = new QuestManager(bus);
+        HueQuests.RegisterAll(qm);
+        var inv = new Inventory();
+        var audio = new NullAudioService();
 
-        // Player near Mệ Bích
-        var playerNear = new Vector2(360f, 450f);
-        float distNear = Vector2.Distance(playerNear, meBichPos);
-        bool canInteractNear = distNear <= interactionRadius;
-        Assert.True(canInteractNear, "Player within 48px radius must be able to interact.");
+        using var scene = new HueExplorationScene(data, audio, new MockInputService(), bus, inv, qm);
+        scene.Enter();
 
-        // Player far from Mệ Bích
-        var playerFar = new Vector2(500f, 450f);
-        float distFar = Vector2.Distance(playerFar, meBichPos);
-        bool canInteractFar = distFar <= interactionRadius;
-        Assert.False(canInteractFar, "Player beyond 48px radius cannot interact.");
+        // 1. Verify scene.InteractionManager contains authentic production interactables
+        Assert.Contains(scene.InteractionManager.Interactables, i => ReferenceEquals(i, scene.MeBich));
+        Assert.Contains(scene.InteractionManager.Interactables, i => ReferenceEquals(i, scene.NgoMon));
+
+        var context = new InteractionContext(scene.Kinematics.Position, inv, qm, data.QuestFlags, bus, audio);
+
+        // 2. Initial player spawn at (400, 480): distance to Mệ Bích (860, 430) and Ngọ Môn (770, 340) is > 300px -> no target
+        var initialTarget = scene.InteractionManager.FindNearestInteractable(scene.Kinematics.Position, context);
+        Assert.Null(initialTarget);
+
+        // 3. Drive player within interaction radius of Mệ Bích (at 860, 420 -> distance = 10px <= 48px)
+        scene.Kinematics.Position = new Vector2(860f, 420f);
+        var targetMeBich = scene.InteractionManager.FindNearestInteractable(scene.Kinematics.Position, context);
+        Assert.NotNull(targetMeBich);
+        Assert.Equal("Npc_MeBich", targetMeBich.Id);
+        Assert.Same(scene.MeBich, targetMeBich);
+
+        // Update interaction manager state and verify prompt bubble activation
+        scene.InteractionManager.Update(0.016f, scene.Kinematics.Position, context);
+        Assert.Equal(scene.MeBich, scene.InteractionManager.CurrentTarget);
+        Assert.True(scene.InteractionManager.BubbleAlpha > 0f);
+
+        // 4. Drive player near Ngọ Môn (at 770, 330 -> distance to interaction center 770, 320 is 10px <= 70px)
+        scene.Kinematics.Position = new Vector2(770f, 330f);
+        var targetNgoMon = scene.InteractionManager.FindNearestInteractable(scene.Kinematics.Position, context);
+        Assert.NotNull(targetNgoMon);
+        Assert.Equal("PoI_NgoMon", targetNgoMon.Id);
+        Assert.Same(scene.NgoMon, targetNgoMon);
+
+        // Update interaction manager state and verify prompt bubble activation for Ngọ Môn
+        scene.InteractionManager.Update(0.016f, scene.Kinematics.Position, context);
+        Assert.Equal(scene.NgoMon, scene.InteractionManager.CurrentTarget);
+        Assert.True(scene.InteractionManager.BubbleAlpha > 0f);
+
+        // 5. Drive player far away (at 500, 450 -> far from all landmarks/NPCs)
+        scene.Kinematics.Position = new Vector2(500f, 450f);
+        var targetFar = scene.InteractionManager.FindNearestInteractable(scene.Kinematics.Position, context);
+        Assert.Null(targetFar);
+
+        scene.Exit();
     }
 
     [Fact]
     public void TC_T1_R1_06_HueExplorationScene_SceneTransition_ReturnsToWorldMapOnHotkeysAndExitPortal()
     {
         var data = SaveData.CreateDefault();
-        var scene = new HueExplorationScene(data);
-        scene.Enter();
+        var input = new MockInputService();
+        var bus = new EventBus();
+        using var scene = new HueExplorationScene(data, new NullAudioService(), input, bus);
 
+        // 1. Scene enter: RequestWorldMap must start false
+        scene.Enter();
         Assert.False(scene.RequestWorldMap);
-        scene.RequestWorldMap = true;
+
+        // 2. Initial welcoming dialogue is active upon entering Hue
+        Assert.True(scene.DialogueBox.IsActive);
+        scene.DialogueBox.Dismiss();
+        Assert.False(scene.DialogueBox.IsActive);
+
+        // 3. Standard update frame keeps RequestWorldMap false
+        scene.Update(0.016f);
+        Assert.False(scene.RequestWorldMap);
+
+        // 4. Exercise authentic dialogue-driven transition trigger:
+        // When Gate Hoi An dialogue option "Choice_Cross" is selected, it triggers "Open_World_Map"
+        // routed through scene.DialogueService and handled by scene.HandleDialogueAction.
+        scene.DialogueService.LoadDialogueFile(GetHueDialoguePath());
+        data.QuestFlags.Gate_HoiAn_Unlocked = true;
+
+        var gateNode = scene.DialogueService.StartDialogue("Dialogue_Gate_HoiAn");
+        Assert.NotNull(gateNode);
+        var branches = scene.DialogueService.GetAvailableBranches(gateNode, data.QuestFlags);
+        Assert.Contains(branches, b => b.ChoiceId == "Choice_Cross");
+
+        // Selecting Choice_Cross triggers "Open_World_Map" which invokes scene.HandleDialogueAction
+        scene.DialogueService.SelectChoice(1); // Choice_Cross
+
+        // 5. Verify scene transition flag was activated by the production dialogue action handler
         Assert.True(scene.RequestWorldMap);
 
         scene.Exit();
@@ -559,26 +647,94 @@ public sealed class HueChapter2E2ETests
     [Fact]
     public void TC_T1_R5_04_BunBoHueCooking_HeadlessLifecycle_ModalOpenAndClose()
     {
-        var engine = new BunBoHueCookingEngine();
-        Assert.False(engine.IsSolved);
+        var data = SaveData.CreateDefault();
+        var qm = new QuestManager();
+        HueQuests.RegisterAll(qm);
 
-        engine.PlaceIngredient(0, ItemIds.BunSoiTo);
-        engine.ResetPuzzle();
+        // Satisfy prerequisite Quest 1
+        qm.StartQuest(HueQuests.Quest1Id);
+        foreach (var ing in ItemIds.AllBunBoIngredients)
+        {
+            qm.RecordObjectiveProgress(HueQuests.Quest1Id, ing, 1);
+        }
+        qm.CompleteQuest(HueQuests.Quest1Id);
 
-        Assert.False(engine.IsSolved);
-        Assert.Null(engine.CurrentSlots[0]);
+        var input = new MockInputService();
+        var scene = new BunBoHueAssemblyScene(data, qm, new EventBus(), new NullAudioService(), input);
+
+        // 1. Enter modal scene
+        scene.Enter();
+        Assert.False(scene.IsSolved);
+        Assert.False(scene.RequestExit);
+        Assert.NotNull(scene.FeedbackMessage);
+
+        // 2. Run update ticks and headless draw
+        for (int i = 0; i < 30; i++)
+        {
+            scene.Update(0.016667f);
+        }
+        var ex = Record.Exception(() => scene.Draw());
+        Assert.Null(ex);
+
+        // 3. Simulate cancel / escape input to close modal
+        input.PressCancel();
+        scene.Update(0.016667f);
+        Assert.True(scene.RequestExit, "Cancel input must flag RequestExit to close modal.");
+
+        // 4. Exit modal
+        scene.Exit();
+        scene.Dispose();
     }
 
     [Fact]
     public void TC_T1_R5_05_HoaDangRiver_HeadlessLifecycle_ModalOpenAndClose()
     {
-        var engine = new HoaDangRiverEngine();
-        Assert.Equal(7, engine.Width);
-        Assert.Equal(5, engine.Height);
-        Assert.False(engine.IsPathClear());
+        var data = SaveData.CreateDefault();
+        var qm = new QuestManager();
+        HueQuests.RegisterAll(qm);
 
-        engine.ResetGrid();
-        Assert.False(engine.IsPathClear());
+        // Satisfy prerequisite Quests 1 and 2
+        qm.StartQuest(HueQuests.Quest1Id);
+        foreach (var ing in ItemIds.AllBunBoIngredients)
+        {
+            qm.RecordObjectiveProgress(HueQuests.Quest1Id, ing, 1);
+        }
+        qm.CompleteQuest(HueQuests.Quest1Id);
+        qm.StartQuest(HueQuests.Quest2Id);
+        qm.RecordObjectiveProgress(HueQuests.Quest2Id, "cook_bun_bo", 1);
+        qm.CompleteQuest(HueQuests.Quest2Id);
+
+        var input = new MockInputService();
+        var scene = new HoaDangRiverScene(data, qm, new EventBus(), new NullAudioService(), input);
+
+        // 1. Enter river modal scene
+        scene.Enter();
+        Assert.False(scene.IsSolved);
+        Assert.False(scene.RequestExit);
+        Assert.NotNull(scene.HintMessage);
+        Assert.Equal(7, scene.Engine.Width);
+        Assert.Equal(5, scene.Engine.Height);
+
+        // 2. Run update ticks and headless draw
+        for (int i = 0; i < 30; i++)
+        {
+            scene.Update(0.016667f);
+        }
+        var ex = Record.Exception(() => scene.Draw());
+        Assert.Null(ex);
+
+        // 3. Request contextual hint
+        scene.TriggerHint();
+        Assert.Contains("Bút Chì", scene.HintMessage);
+
+        // 4. Simulate cancel / escape input to close modal
+        input.PressCancel();
+        scene.Update(0.016667f);
+        Assert.True(scene.RequestExit, "Cancel input must flag RequestExit to close modal.");
+
+        // 5. Exit modal
+        scene.Exit();
+        scene.Dispose();
     }
 
     [Fact]
@@ -624,6 +780,25 @@ public sealed class HueChapter2E2ETests
         input.SimulateOpposingKeys(true, true, true, true); // W+S, A+D
 
         Assert.Equal(Vector2.Zero, input.MovementDirection);
+
+        var kinematics = new CharacterKinematics { Position = new Vector2(400f, 480f) };
+        var initialPos = kinematics.Position;
+        var world = new CollisionWorld { MapBounds = new AABB(0, 0, 1600, 900) };
+
+        // 1. Updating kinematics with zero movement direction from rest maintains zero velocity and unchanged position
+        kinematics.Update(input.MovementDirection, world, 0.016f);
+        Assert.Equal(Vector2.Zero, kinematics.Velocity);
+        Assert.Equal(initialPos, kinematics.Position);
+        Assert.False(kinematics.IsMoving);
+
+        // 2. Even with existing velocity, zero movement direction from opposing keys decelerates to zero under friction
+        kinematics.Velocity = new Vector2(100f, 0f);
+        for (int i = 0; i < 30; i++)
+        {
+            kinematics.Update(input.MovementDirection, world, 0.016f);
+        }
+        Assert.Equal(Vector2.Zero, kinematics.Velocity);
+        Assert.False(kinematics.IsMoving);
     }
 
     [Fact]
@@ -649,46 +824,104 @@ public sealed class HueChapter2E2ETests
         var data = SaveData.CreateDefault();
         data.QuestFlags.Gate_HoiAn_Unlocked = false;
 
-        // Bridge obstacle blocks player at X >= 1520 when locked
-        var world = new CollisionWorld { MapBounds = new AABB(0, 0, 1600, 900) };
-        var bridgeObstacle = new AABB(1500, 320, 1600, 820);
-        world.AddObstacle(bridgeObstacle);
+        using var scene = new HueExplorationScene(data);
+        scene.Enter();
 
-        var kinematics = new CharacterKinematics { Position = new Vector2(1480f, 480f) };
+        // Verify map bounds (1600x900)
+        Assert.Equal(1600f, scene.CollisionWorld.MapBounds.Width);
+        Assert.Equal(900f, scene.CollisionWorld.MapBounds.Height);
+
+        // Assert directly that scene.CollisionWorld.Obstacles contains the bridge obstacle registered naturally by scene.Enter()
+        var bridgeBarrierBounds = new AABB(1480, 490, 1510, 570);
+        Assert.Contains(scene.CollisionWorld.Obstacles, o => o.Overlaps(bridgeBarrierBounds));
+
+        // Drive player rightward toward bridge barrier while locked within walkway channel (Y: 485..575)
+        scene.Kinematics.Position = new Vector2(1440f, 530f);
         for (int i = 0; i < 30; i++)
         {
-            kinematics.Update(new Vector2(1f, 0f), world, 0.016f);
+            scene.Kinematics.Update(new Vector2(1f, 0f), scene.CollisionWorld, 0.016f);
         }
 
-        Assert.True(kinematics.Position.X <= 1500f, "Player cannot bypass bridge barrier while locked.");
+        Assert.True(scene.Kinematics.Position.X <= 1480f,
+            $"Player X ({scene.Kinematics.Position.X}) cannot bypass locked bridge obstacle at X=1480.");
+
+        scene.Exit();
     }
 
     [Fact]
     public void TC_T2_R1_05_InteractiveTrigger_EdgeOfRadius_ExactBoundaryToggling()
     {
-        var targetCenter = new Vector2(300f, 300f);
-        float radius = 48.0f;
+        var manager = new InteractionManager();
+        var entityPos = new Vector2(300f, 300f);
+        var entity = new TestInteractable
+        {
+            Id = "Trigger_NgoMon",
+            DisplayName = "Ngọ Môn Landmark",
+            Position = entityPos,
+            InteractionRadius = InteractionManager.DefaultEnterRadius // 48.0f
+        };
+        manager.Register(entity);
 
-        var inside = targetCenter + new Vector2(47.9f, 0f);
-        Assert.True(Vector2.Distance(inside, targetCenter) <= radius);
+        var context = new InteractionContext(
+            PlayerPosition: Vector2.Zero,
+            Inventory: new Inventory(),
+            QuestManager: new QuestManager(),
+            QuestFlags: new QuestFlags(),
+            EventBus: new EventBus(),
+            AudioService: new NullAudioService()
+        );
 
-        var outside = targetCenter + new Vector2(48.1f, 0f);
-        Assert.False(Vector2.Distance(outside, targetCenter) <= radius);
+        // 1. Boundary check: 47.9f is INSIDE entry radius (48.0f)
+        var insidePos = entityPos + new Vector2(47.9f, 0f);
+        var targetInside = manager.FindNearestInteractable(insidePos, context, null);
+        Assert.NotNull(targetInside);
+        Assert.Equal("Trigger_NgoMon", targetInside.Id);
+
+        // 2. Boundary check: 48.1f is OUTSIDE entry radius (48.0f) when no current target
+        var outsidePos = entityPos + new Vector2(48.1f, 0f);
+        var targetOutside = manager.FindNearestInteractable(outsidePos, context, null);
+        Assert.Null(targetOutside);
+
+        // 3. Hysteresis check: Once targeted, exit radius expands to 54.0f (48.0f + 6.0px buffer)
+        var targetRetained = manager.FindNearestInteractable(outsidePos, context, entity);
+        Assert.NotNull(targetRetained); // Retained because 48.1f <= 54.0f!
+
+        // 4. Past hysteresis boundary: 54.1f exceeds exit radius
+        var pastHysteresisPos = entityPos + new Vector2(54.1f, 0f);
+        var targetLost = manager.FindNearestInteractable(pastHysteresisPos, context, entity);
+        Assert.Null(targetLost);
     }
 
     [Fact]
     public void TC_T2_R1_06_RapidSceneTransition_RapidToggleBetweenExplorationAndWorldMap()
     {
         var data = SaveData.CreateDefault();
-        using var scene = new HueExplorationScene(data);
+        var input = new MockInputService();
+        using var scene = new HueExplorationScene(data, new NullAudioService(), input, new EventBus());
 
         for (int i = 0; i < 50; i++)
         {
             scene.Enter();
+            Assert.False(scene.RequestWorldMap);
+
+            if (scene.DialogueBox.IsActive)
+            {
+                scene.DialogueBox.Dismiss();
+            }
+
+            // Execute update tick and headless draw
+            scene.Update(0.016667f);
+            scene.Draw();
+
+            // Simulate transition request and clean exit
             scene.RequestWorldMap = true;
-            Assert.True(scene.RequestWorldMap);
             scene.Exit();
+            Assert.False(scene.DialogueBox.IsActive);
         }
+
+        // Verify scene kinematics and camera tracker remain stable after 50 cycles
+        Assert.Equal(new Vector2(400f, 480f), scene.Kinematics.Position);
+        Assert.Equal(0.85f, scene.CameraTracker.Zoom);
     }
 
     // =========================================================================
@@ -1094,19 +1327,74 @@ public sealed class HueChapter2E2ETests
     [Fact]
     public void TC_T3_05_SimultaneousCollisionAndInteractionTriggerBoundary_AtLandmarkHotspots()
     {
-        var world = new CollisionWorld { MapBounds = new AABB(0, 0, 1600, 900) };
-        world.AddObstacle(new AABB(0, 0, 1600, 320)); // North wall
+        var data = SaveData.CreateDefault();
+        var bus = new EventBus();
+        var qm = new QuestManager(bus);
+        HueQuests.RegisterAll(qm);
+        var inv = new Inventory();
+        var audio = new NullAudioService();
 
-        var meBichPos = new Vector2(350f, 340f); // Placed against the wall
-        var kinematics = new CharacterKinematics { Position = new Vector2(350f, 350f) };
+        using var scene = new HueExplorationScene(data, audio, new MockInputService(), bus, inv, qm);
+        scene.Enter();
 
-        // Push against wall
-        kinematics.Update(new Vector2(0f, -1f), world, 0.016f);
-        Assert.True(kinematics.Position.Y >= 320f);
+        // 1. Verify authentic landmark Ngọ Môn & Mệ Bích are registered in scene.InteractionManager
+        Assert.Contains(scene.InteractionManager.Interactables, i => ReferenceEquals(i, scene.NgoMon));
+        Assert.Contains(scene.InteractionManager.Interactables, i => ReferenceEquals(i, scene.MeBich));
 
-        // Interaction remains valid while colliding
-        float dist = Vector2.Distance(kinematics.Position, meBichPos);
-        Assert.True(dist <= 48.0f, "Interaction trigger should remain active while colliding with wall.");
+        var context = new InteractionContext(
+            scene.Kinematics.Position,
+            inv,
+            qm,
+            data.QuestFlags,
+            bus,
+            audio
+        );
+
+        // --- Hotspot 1: Ngọ Môn gate adjacent to the Citadel wall obstacle (Y <= 320) ---
+        scene.Kinematics.Position = new Vector2(770f, 350f);
+
+        // Drive player upward into the Citadel obstacle collider (Y <= 320)
+        for (int i = 0; i < 30; i++)
+        {
+            scene.Kinematics.Update(new Vector2(0f, -1f), scene.CollisionWorld, 0.016f);
+        }
+
+        // Kinematics is clamped by scene.CollisionWorld at Y >= 320f
+        Assert.True(scene.Kinematics.Position.Y >= 320f);
+
+        // Interaction with Ngọ Môn remains valid while colliding with the Citadel wall
+        var nearestNgoMon = scene.InteractionManager.FindNearestInteractable(scene.Kinematics.Position, context);
+        Assert.NotNull(nearestNgoMon);
+        Assert.Equal("PoI_NgoMon", nearestNgoMon.Id);
+        Assert.Same(scene.NgoMon, nearestNgoMon);
+
+        // Verify prompt bubble activation
+        scene.InteractionManager.Update(0.016f, scene.Kinematics.Position, context);
+        Assert.Equal(scene.NgoMon, scene.InteractionManager.CurrentTarget);
+        Assert.True(scene.InteractionManager.BubbleAlpha > 0f);
+
+        // --- Hotspot 2: Mệ Bích adjacent to her culinary stall obstacle ---
+        scene.Kinematics.Position = new Vector2(860f, 460f);
+
+        // Drive player upward into Mệ Bích's stall collider
+        for (int i = 0; i < 30; i++)
+        {
+            scene.Kinematics.Update(new Vector2(0f, -1f), scene.CollisionWorld, 0.016f);
+        }
+
+        // Kinematics is clamped by Mệ Bích's stall obstacle
+        Assert.True(scene.Kinematics.Position.Y >= 420f);
+
+        var nearestMeBich = scene.InteractionManager.FindNearestInteractable(scene.Kinematics.Position, context);
+        Assert.NotNull(nearestMeBich);
+        Assert.Equal("Npc_MeBich", nearestMeBich.Id);
+        Assert.Same(scene.MeBich, nearestMeBich);
+
+        scene.InteractionManager.Update(0.016f, scene.Kinematics.Position, context);
+        Assert.Equal(scene.MeBich, scene.InteractionManager.CurrentTarget);
+        Assert.True(scene.InteractionManager.BubbleAlpha > 0f);
+
+        scene.Exit();
     }
 
     [Fact]
@@ -1133,7 +1421,7 @@ public sealed class HueChapter2E2ETests
     public void TC_T4_01_Scenario1_GoldenPathPlaythrough_FullChapterE2E()
     {
         // ==========================================
-        // 1. BOOT INTO HUE AFTER HANOI
+        // 1. BOOT INTO HUE AFTER HANOI & DRIVE EXPLORATION SCENE
         // ==========================================
         var driver = new HueTestSimulationDriver();
         driver.CurrentData.WorldProgression.MarkRegionCompleted(WorldProgression.RegionHanoi);
@@ -1141,6 +1429,18 @@ public sealed class HueChapter2E2ETests
 
         Assert.True(driver.CurrentData.WorldProgression.IsRegionUnlocked(WorldProgression.RegionHue));
         Assert.False(driver.CurrentData.WorldProgression.IsRegionUnlocked(WorldProgression.RegionHoiAn));
+
+        // Enter and step HueExplorationScene headlessly
+        using (var explorationScene = new HueExplorationScene(driver.CurrentData, driver.AudioService, driver.InputService, driver.EventBus))
+        {
+            explorationScene.Enter();
+            Assert.True(explorationScene.DialogueBox.IsActive);
+            explorationScene.DialogueBox.Dismiss();
+
+            explorationScene.Update(0.016667f);
+            explorationScene.Draw();
+            explorationScene.Exit();
+        }
 
         // ==========================================
         // 2. QUEST 1: GATHER 5 INGREDIENTS
@@ -1150,16 +1450,38 @@ public sealed class HueChapter2E2ETests
         Assert.Equal(5, driver.Inventory.Count);
 
         // ==========================================
-        // 3. QUEST 2: COOK BÚN BÒ HUẾ
+        // 3. QUEST 2: COOK BÚN BÒ HUẾ (DRIVE REAL BunBoHueAssemblyScene)
         // ==========================================
-        Assert.True(driver.SimulateSolveBunBoCooking());
+        var cookingScene = new BunBoHueAssemblyScene(driver.CurrentData, driver.QuestManager, driver.EventBus, driver.AudioService, driver.InputService);
+        cookingScene.Enter();
+        for (int i = 0; i < 5; i++)
+        {
+            cookingScene.PlaceCard(i, i);
+        }
+        bool cookingSolved = cookingScene.Validate();
+        Assert.True(cookingSolved, "Authentic Bún Bò Huế recipe must validate successfully.");
+        cookingScene.Update(0.016667f);
+        cookingScene.Draw();
+        cookingScene.Exit();
+        cookingScene.Dispose();
+
         Assert.True(driver.CurrentData.QuestFlags.Hue_Q2_Completed);
         Assert.True(Math.Abs(driver.CurrentData.WorldProgression.GetColorRestoration(WorldProgression.RegionHue) - 33.3f) < 0.1f);
 
         // ==========================================
-        // 4. QUEST 3: THẢ ĐÈN HOA ĐĂNG
+        // 4. QUEST 3: THẢ ĐÈN HOA ĐĂNG (DRIVE REAL HoaDangRiverScene)
         // ==========================================
-        Assert.True(driver.SimulateClearRiverPath());
+        var riverScene = new HoaDangRiverScene(driver.CurrentData, driver.QuestManager, driver.EventBus, driver.AudioService, driver.InputService);
+        riverScene.Enter();
+        Assert.True(riverScene.Push("Obj_FruitBoat_1", Direction.Left));
+        Assert.True(riverScene.Push("Obj_DragonBoat_1", Direction.Down));
+        Assert.True(riverScene.Push("Obj_LotusCluster_1", Direction.Down));
+        Assert.True(riverScene.IsSolved, "River path must be cleared to allow sacred lanterns to reach Chùa Thiên Mụ.");
+        riverScene.Update(0.016667f);
+        riverScene.Draw();
+        riverScene.Exit();
+        riverScene.Dispose();
+
         Assert.True(driver.CurrentData.QuestFlags.Hue_Q3_Completed);
 
         // ==========================================
