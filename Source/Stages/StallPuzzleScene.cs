@@ -522,8 +522,7 @@ public sealed class StallPuzzleScene : IScene
         if (!Raylib.IsWindowReady()) return;
 
         // Background: Hanoi street scene
-        Color bgBase = HanoiPalette.ApplyDesaturation(HanoiPalette.StoneStreet, _solved ? 50f + _bloomProgress * 50f : 25f);
-        Raylib.ClearBackground(bgBase);
+        DrawStreetBackdrop();
 
         DrawHeader();
         DrawGridBackground();
@@ -546,20 +545,120 @@ public sealed class StallPuzzleScene : IScene
     {
         string title = "Dọn Lối Ra Cầu Long Biên";
         Vector2 sz = FontManager.Instance.MeasureText(title, 26f);
-        FontManager.Instance.DrawTextOutline(title, new Vector2(640f - sz.X / 2f, 20f), 26f,
-            HanoiPalette.WallYellow, HanoiPalette.CartoonOutline, 2f);
-
         string sub = "Click/kéo sạp · Bấm nút mũi tên hoặc WASD · [Tab/1-5] Chọn sạp · [R] Làm lại · [H] Gợi ý · [ESC] Thoát";
         Vector2 subSz = FontManager.Instance.MeasureText(sub, 11f);
+
+        // Dark signboard plate so the header stays legible over the facade strip
+        float plateW = MathF.Max(sz.X, subSz.X) + 40f;
+        Rectangle plate = new(640f - plateW / 2f, 14f, plateW, 64f);
+        VectorRenderer.DrawRoundedRect(plate, 0.3f, new Color(46, 34, 28, 235), new Color(222, 186, 110, 220), 2f);
+
+        FontManager.Instance.DrawTextOutline(title, new Vector2(640f - sz.X / 2f, 20f), 26f,
+            HanoiPalette.WallYellow, HanoiPalette.CartoonOutline, 2f);
         FontManager.Instance.DrawText(sub, new Vector2(640f - subSz.X / 2f, 56f), 11f,
-            new Color(90, 70, 50, 230));
+            new Color(240, 226, 200, 235));
+    }
+
+    /// Old-Quarter street at dusk behind the puzzle board; saturation rises as the board is solved.
+    private void DrawStreetBackdrop()
+    {
+        float sat = _solved ? 60f + _bloomProgress * 40f : 60f;
+        Color Sat(Color c) => HanoiPalette.ApplyDesaturation(c, sat);
+
+        Raylib.DrawRectangleGradientV(0, 0, 1280, 720, Sat(new Color(92, 78, 70, 255)), Sat(new Color(52, 44, 42, 255)));
+
+        // Facade strip with shutters and lanterns across the top
+        Raylib.DrawRectangle(0, 0, 1280, 96, Sat(HanoiPalette.WallYellowShadow));
+        Raylib.DrawRectangle(0, 0, 1280, 18, Sat(HanoiPalette.TerracottaRoof));
+        Raylib.DrawLineEx(new Vector2(0, 18), new Vector2(1280, 18), 3f, Sat(HanoiPalette.TerracottaDark));
+        for (int sx = 30; sx < 1280; sx += 150)
+        {
+            Raylib.DrawRectangle(sx, 32, 34, 40, Sat(HanoiPalette.ShutterGreen));
+            Raylib.DrawRectangleLines(sx, 32, 34, 40, HanoiPalette.CartoonOutline);
+            Raylib.DrawLineEx(new Vector2(sx + 17, 32), new Vector2(sx + 17, 72), 1.2f, Sat(HanoiPalette.ShutterGreenDark));
+        }
+        for (int i = 0; i < 9; i++)
+        {
+            float lx = 105f + i * 150f;
+            float sway = MathF.Sin(_totalTime * 2f + i) * 2.5f;
+            Vector2 c = new(lx + sway, 66f);
+            Raylib.DrawCircleV(c, 22f, Raylib.ColorAlpha(new Color(255, 180, 70, 255), 0.16f));
+            Raylib.DrawEllipse((int)c.X, (int)c.Y, 7f, 10f, Sat(new Color(220, 40, 40, 255)));
+            Raylib.DrawEllipseLines((int)c.X, (int)c.Y, 7f, 10f, HanoiPalette.CartoonOutline);
+        }
+        Raylib.DrawRectangleGradientV(0, 96, 1280, 30, Raylib.ColorAlpha(Color.Black, 0.35f), Raylib.ColorAlpha(Color.Black, 0f));
+
+        // Wooden board frame under the grid
+        float gw = _grid.Width * CellSize, gh = _grid.Height * CellSize;
+        Rectangle frame = new(GridOriginX - 12f, GridOriginY - 12f, gw + 24f, gh + 24f);
+        VectorRenderer.DrawRoundedRect(frame, 0.04f, Sat(new Color(120, 82, 54, 255)), HanoiPalette.CartoonOutline, 2.5f);
+        Raylib.DrawRectangleLinesEx(new Rectangle(frame.X + 5f, frame.Y + 5f, frame.Width - 10f, frame.Height - 10f), 1.2f, Sat(new Color(222, 186, 110, 200)));
+
+        // Long Biên bridge running off the exit cell toward the sidebar
+        DrawLongBienApproach(GridOriginX + gw + 12f, GridOriginY + 2f * CellSize, 1036f, Sat);
+    }
+
+    private void DrawLongBienApproach(float x0, float deckTop, float x1, Func<Color, Color> sat)
+    {
+        float deckBottom = deckTop + CellSize;
+        Color iron = sat(HanoiPalette.RustedIron);
+        Color patina = sat(HanoiPalette.RustedIronPatina);
+
+        // River below
+        Raylib.DrawRectangleGradientV((int)x0, (int)deckBottom, (int)(x1 - x0), 180, sat(new Color(70, 110, 130, 255)), sat(new Color(40, 66, 84, 0)));
+        for (int i = 0; i < 6; i++)
+        {
+            float wx = x0 + 10f + ((i * 47f + _totalTime * 18f) % (x1 - x0 - 40f));
+            float wy = deckBottom + 30f + (i % 3) * 30f;
+            Raylib.DrawLineEx(new Vector2(wx, wy), new Vector2(wx + 22f, wy), 1.6f, Raylib.ColorAlpha(Color.White, 0.25f));
+        }
+
+        // Piers
+        for (float px = x0 + 40f; px < x1; px += 110f)
+        {
+            Raylib.DrawRectangle((int)px - 9, (int)deckBottom, 18, 90, sat(new Color(120, 110, 100, 255)));
+            Raylib.DrawRectangleLines((int)px - 9, (int)deckBottom, 18, 90, HanoiPalette.CartoonOutline);
+        }
+
+        // Deck with rail track
+        Raylib.DrawRectangle((int)x0, (int)deckTop + 8, (int)(x1 - x0), (int)CellSize - 16, sat(new Color(98, 88, 84, 255)));
+        for (float sx = x0 + 4f; sx < x1; sx += 16f)
+        {
+            Raylib.DrawRectangle((int)sx, (int)(deckTop + CellSize * 0.5f - 12f), 7, 24, sat(new Color(78, 54, 40, 255)));
+        }
+        Raylib.DrawLineEx(new Vector2(x0, deckTop + CellSize * 0.5f - 8f), new Vector2(x1, deckTop + CellSize * 0.5f - 8f), 3f, sat(new Color(190, 176, 160, 255)));
+        Raylib.DrawLineEx(new Vector2(x0, deckTop + CellSize * 0.5f + 8f), new Vector2(x1, deckTop + CellSize * 0.5f + 8f), 3f, sat(new Color(190, 176, 160, 255)));
+
+        // Cantilever truss arches above the deck
+        for (float sl = x0; sl < x1 - 20f; sl += 110f)
+        {
+            float sr = Math.Min(sl + 110f, x1);
+            Vector2 prev = new(sl, deckTop + 8f);
+            for (int seg = 1; seg <= 10; seg++)
+            {
+                float u = seg / 10f;
+                Vector2 cur = new(sl + (sr - sl) * u, deckTop + 8f - 70f * 4f * u * (1f - u));
+                Raylib.DrawLineEx(prev, cur, 4f, iron);
+                Raylib.DrawLineEx(cur, new Vector2(cur.X, deckTop + 8f), 1.5f, patina);
+                if (seg % 2 == 0) Raylib.DrawLineEx(prev, new Vector2(cur.X, deckTop + 8f), 1.2f, patina);
+                prev = cur;
+            }
+        }
+        Raylib.DrawLineEx(new Vector2(x0, deckTop + 8f), new Vector2(x1, deckTop + 8f), 4f, iron);
+        Raylib.DrawLineEx(new Vector2(x0, deckBottom - 8f), new Vector2(x1, deckBottom - 8f), 4f, iron);
+
+        string sign = "CẦU LONG BIÊN";
+        Vector2 sz = FontManager.Instance.MeasureText(sign, 12f);
+        Rectangle plate = new((x0 + x1) * 0.5f - sz.X * 0.5f - 10f, deckTop - 100f, sz.X + 20f, 22f);
+        VectorRenderer.DrawRoundedRect(plate, 0.3f, sat(new Color(30, 92, 70, 255)), HanoiPalette.CartoonOutline, 1.5f, withShadow: false);
+        FontManager.Instance.DrawText(sign, new Vector2(plate.X + 10f, plate.Y + 4f), 12f, new Color(255, 248, 226, 255));
     }
 
     private void DrawGridBackground()
     {
         int cols = _grid.Width, rows = _grid.Height;
 
-        // Draw cells
+        // Draw cells as rounded paving slabs (path row is the lighter street lane)
         for (int row = 0; row < rows; row++)
         {
             for (int col = 0; col < cols; col++)
@@ -569,15 +668,19 @@ public sealed class StallPuzzleScene : IScene
                 Rectangle cell = new(x, y, CellSize, CellSize);
 
                 bool isPathRow = row == 2;
-                Color cellColor = isPathRow ? new Color(195, 185, 168, 255) : new Color(170, 161, 148, 255);
+                int h = ((col * 73856093) ^ (row * 19349663)) & 0x7fffffff;
+                Color cellColor = isPathRow
+                    ? new Color(204 + h % 8, 194 + h % 8, 176 + h % 6, 255)
+                    : new Color(168 + h % 10, 159 + h % 10, 146 + h % 8, 255);
 
                 bool isEntrance = col == 0 && row == 2;
                 bool isExit = col == cols - 1 && row == 2;
                 if (isEntrance) cellColor = new Color(130, 210, 140, 255);
                 if (isExit) cellColor = HanoiPalette.ApplyDesaturation(new Color(255, 200, 50, 255), _solved ? 100f : 40f);
 
-                Raylib.DrawRectangleRec(cell, cellColor);
-                Raylib.DrawRectangleLinesEx(cell, 1f, HanoiPalette.StoneMortar);
+                Raylib.DrawRectangleRec(cell, HanoiPalette.StoneMortar);
+                Raylib.DrawRectangleRounded(new Rectangle(x + 2f, y + 2f, CellSize - 4f, CellSize - 4f), 0.14f, 3, cellColor);
+                Raylib.DrawLineEx(new Vector2(x + 6f, y + 5f), new Vector2(x + CellSize - 6f, y + 5f), 1.5f, Raylib.ColorAlpha(Color.White, 0.18f));
 
                 if (isEntrance)
                 {
@@ -608,16 +711,6 @@ public sealed class StallPuzzleScene : IScene
             }
         }
 
-        // Draw Long Biên bridge silhouette on right edge
-        Color bridgeColor = HanoiPalette.ApplyDesaturation(HanoiPalette.RustedIron, _solved ? _bloomProgress * 80f : 20f);
-        float bx = GridOriginX + cols * CellSize + 10f;
-        float by = GridOriginY;
-        for (int i = 0; i < 3; i++)
-        {
-            Raylib.DrawLineEx(new Vector2(bx + i * 24f, by + 100f), new Vector2(bx + i * 24f + 12f, by + 20f), 4f, bridgeColor);
-            Raylib.DrawLineEx(new Vector2(bx + i * 24f + 12f, by + 20f), new Vector2(bx + i * 24f + 24f, by + 100f), 4f, bridgeColor);
-        }
-        Raylib.DrawLineEx(new Vector2(bx, by + 100f), new Vector2(bx + 72f, by + 100f), 4f, bridgeColor);
     }
 
     private void DrawEntities()

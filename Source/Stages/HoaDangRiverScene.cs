@@ -500,9 +500,7 @@ public sealed class HoaDangRiverScene : IScene
     {
         if (!Raylib.IsWindowReady()) return;
 
-        // Dark river night backdrop overlay
-        Raylib.DrawRectangle(0, 0, 1280, 720, Raylib.ColorAlpha(new Color(10, 18, 30, 255), 0.88f));
-
+        DrawNightBackdrop();
         DrawTitle();
         DrawRiverGrid();
         DrawEntities();
@@ -513,6 +511,72 @@ public sealed class HoaDangRiverScene : IScene
         if (_solved) DrawSolveCelebration();
 
         _particles.Draw();
+    }
+
+    private void DrawNightBackdrop()
+    {
+        // Festival night over Sông Hương: deep indigo sky melting into dark water
+        Raylib.DrawRectangleGradientV(0, 0, 1280, 420, new Color(14, 22, 44, 255), new Color(32, 48, 78, 255));
+        Raylib.DrawRectangleGradientV(0, 420, 1280, 300, new Color(16, 36, 58, 255), new Color(8, 18, 32, 255));
+
+        // Stars
+        for (int i = 0; i < 70; i++)
+        {
+            int h = ((i * 73856093) ^ 19349663) & 0x7fffffff;
+            float sx = h % 1280;
+            float sy = (h / 13) % 320;
+            float tw = 0.5f + 0.5f * MathF.Sin(_totalTime * 2f + i);
+            Raylib.DrawCircleV(new Vector2(sx, sy), (h % 3 == 0) ? 1.6f : 1f, Raylib.ColorAlpha(new Color(220, 230, 250, 255), 0.25f + 0.45f * tw));
+        }
+
+        // Full moon with halo
+        Vector2 moon = new(1130f, 86f);
+        Raylib.DrawCircleV(moon, 46f, Raylib.ColorAlpha(new Color(250, 244, 214, 255), 0.12f));
+        Raylib.DrawCircleV(moon, 30f, new Color(250, 244, 214, 255));
+        Raylib.DrawCircleV(moon + new Vector2(-8f, -6f), 5f, new Color(232, 224, 192, 255));
+        Raylib.DrawCircleV(moon + new Vector2(10f, 8f), 3.5f, new Color(232, 224, 192, 255));
+
+        // Thiên Mụ pagoda silhouette (right bank) & Trường Tiền arches silhouette (left)
+        Color sil = new(10, 16, 30, 255);
+        float pgX = 150f, pgY = 300f;
+        for (int tier = 0; tier < 7; tier++)
+        {
+            float w = 64f - tier * 7f;
+            Raylib.DrawRectangle((int)(pgX - w * 0.5f), (int)(pgY - (tier + 1) * 20f), (int)w, 20, sil);
+            Raylib.DrawLineEx(new Vector2(pgX - w * 0.5f - 6f, pgY - (tier + 1) * 20f), new Vector2(pgX + w * 0.5f + 6f, pgY - (tier + 1) * 20f), 2f, sil);
+        }
+        Raylib.DrawLineEx(new Vector2(pgX, pgY - 140f), new Vector2(pgX, pgY - 156f), 2.5f, sil);
+        for (int span = 0; span < 3; span++)
+        {
+            float sl = 950f + span * 110f;
+            Vector2 prev = new(sl, 300f);
+            for (int seg = 1; seg <= 10; seg++)
+            {
+                float u = seg / 10f;
+                float x = sl + 110f * u;
+                float y = 300f - 44f * 4f * u * (1f - u);
+                Raylib.DrawLineEx(prev, new Vector2(x, y), 2.5f, sil);
+                prev = new Vector2(x, y);
+            }
+        }
+        Raylib.DrawRectangle(930, 298, 350, 6, sil);
+
+        // Moon reflection shimmering on open water below
+        for (int i = 0; i < 8; i++)
+        {
+            float ry = 630f + i * 10f;
+            float rw = 30f - i * 2.5f + MathF.Sin(_totalTime * 2.5f + i) * 6f;
+            Raylib.DrawEllipse((int)(1130f + MathF.Sin(_totalTime + i) * 4f), (int)ry, rw, 3f, Raylib.ColorAlpha(new Color(250, 240, 200, 255), 0.10f));
+        }
+
+        // Distant floating lanterns drifting on the dark water edges
+        for (int i = 0; i < 6; i++)
+        {
+            float lx = (i * 230f + _totalTime * 12f) % 1380f - 50f;
+            float ly = 648f + (i % 3) * 22f;
+            Raylib.DrawCircleV(new Vector2(lx, ly), 9f, Raylib.ColorAlpha(new Color(255, 190, 90, 255), 0.25f));
+            Raylib.DrawCircleV(new Vector2(lx, ly), 3.5f, new Color(255, 205, 110, 230));
+        }
     }
 
     private void DrawTitle()
@@ -529,11 +593,14 @@ public sealed class HoaDangRiverScene : IScene
 
     private void DrawRiverGrid()
     {
-        // River base panel
+        // River base panel framed like a lacquered festival board
         float gridW = _grid.Width * CellSize;
         float gridH = _grid.Height * CellSize;
         Rectangle riverRec = new(GridOriginX, GridOriginY, gridW, gridH);
-        Raylib.DrawRectangleRec(riverRec, new Color(16, 42, 68, 255)); // Deep night river blue
+        Rectangle frame = new(GridOriginX - 10f, GridOriginY - 10f, gridW + 20f, gridH + 20f);
+        VectorRenderer.DrawRoundedRect(frame, 0.06f, new Color(52, 38, 30, 255), new Color(222, 186, 110, 220), 2.5f);
+        Raylib.DrawRectangleGradientV((int)riverRec.X, (int)riverRec.Y, (int)riverRec.Width, (int)riverRec.Height,
+            new Color(20, 52, 82, 255), new Color(12, 34, 58, 255));
 
         // Flowing river wave reflections
         for (int r = 1; r < _grid.Height - 1; r++)
@@ -573,15 +640,26 @@ public sealed class HoaDangRiverScene : IScene
             Raylib.DrawCircleV(pLast, 6f, new Color(255, 235, 130, 255));
         }
 
-        // Entrance marker: Imperial Citadel Pier (0, 2)
+        // Entrance marker: Imperial Citadel Pier (0, 2) — glowing great lantern waiting to sail
         Vector2 entPos = new(GridOriginX - 12f, GridOriginY + 2.5f * CellSize);
-        Raylib.DrawCircleV(entPos, 18f, new Color(255, 193, 7, 240));
-        FontManager.Instance.DrawText("Bến Ngự", new Vector2(GridOriginX - 70f, GridOriginY + 2.3f * CellSize), 11f, Color.White);
+        float pulse = 0.85f + 0.15f * MathF.Sin(_totalTime * 3f);
+        Raylib.DrawCircleV(entPos, 26f * pulse, Raylib.ColorAlpha(new Color(255, 193, 60, 255), 0.25f));
+        Raylib.DrawCircleV(entPos, 16f, new Color(255, 193, 7, 255));
+        Raylib.DrawTriangle(entPos + new Vector2(-14f, 2f), entPos + new Vector2(0f, -12f), entPos + new Vector2(14f, 2f), new Color(255, 150, 40, 255));
+        Raylib.DrawCircleV(entPos + new Vector2(0f, -4f), 4f, new Color(255, 250, 210, 255));
+        FontManager.Instance.DrawTextOutline("Bến Ngự", new Vector2(GridOriginX - 76f, GridOriginY + 2.3f * CellSize), 11f, Color.White, new Color(30, 30, 40, 255), 1.5f);
 
-        // Exit marker: Sacred Waters (6, 2)
+        // Exit marker: Sacred Waters (6, 2) — lotus shrine of Thiên Mụ
         Vector2 exitPos = new(GridOriginX + gridW + 12f, GridOriginY + 2.5f * CellSize);
-        Raylib.DrawCircleV(exitPos, 18f, new Color(244, 143, 177, 240));
-        FontManager.Instance.DrawText("Thiên Mụ", new Vector2(GridOriginX + gridW + 16f, GridOriginY + 2.3f * CellSize), 11f, Color.White);
+        Raylib.DrawCircleV(exitPos, 26f * pulse, Raylib.ColorAlpha(new Color(244, 143, 177, 255), 0.25f));
+        Raylib.DrawCircleV(exitPos, 16f, new Color(244, 143, 177, 255));
+        for (int p = 0; p < 5; p++)
+        {
+            float a = -MathF.PI / 2f + p * MathF.PI * 2f / 5f;
+            Raylib.DrawCircleV(exitPos + new Vector2(MathF.Cos(a) * 9f, MathF.Sin(a) * 9f), 5f, new Color(252, 190, 212, 255));
+        }
+        Raylib.DrawCircleV(exitPos, 5f, new Color(255, 244, 214, 255));
+        FontManager.Instance.DrawTextOutline("Thiên Mụ", new Vector2(GridOriginX + gridW + 18f, GridOriginY + 2.3f * CellSize), 11f, Color.White, new Color(30, 30, 40, 255), 1.5f);
     }
 
     private void DrawEntities()
@@ -597,9 +675,22 @@ public sealed class HoaDangRiverScene : IScene
 
             if (entity.IsStaticWall)
             {
-                // Stone pier embankment
-                Raylib.DrawRectangleRec(bounds, new Color(75, 85, 95, 255));
-                Raylib.DrawRectangleLinesEx(bounds, 1.5f, new Color(110, 120, 135, 255));
+                // Mossy stone embankment with block courses
+                Raylib.DrawRectangleRounded(bounds, 0.12f, 3, new Color(82, 90, 98, 255));
+                Raylib.DrawRectangleRoundedLinesEx(bounds, 0.12f, 3, 1.5f, new Color(118, 128, 140, 255));
+                for (float gx2 = bounds.X + 18f; gx2 < bounds.X + bounds.Width - 6f; gx2 += 24f)
+                {
+                    Raylib.DrawLineEx(new Vector2(gx2, bounds.Y + 4f), new Vector2(gx2, bounds.Y + bounds.Height - 4f), 1f, new Color(62, 70, 78, 255));
+                }
+                Raylib.DrawLineEx(new Vector2(bounds.X + 4f, bounds.Y + bounds.Height * 0.5f), new Vector2(bounds.X + bounds.Width - 4f, bounds.Y + bounds.Height * 0.5f), 1f, new Color(62, 70, 78, 255));
+                int mossSeed = (int)(bounds.X * 7 + bounds.Y * 13);
+                for (int m = 0; m < 3; m++)
+                {
+                    int h = ((mossSeed + m * 97) * 73856093) & 0x7fffffff;
+                    float mx = bounds.X + 8f + h % Math.Max(1, (int)bounds.Width - 16);
+                    float my = bounds.Y + 6f + (h / 11) % Math.Max(1, (int)bounds.Height - 12);
+                    Raylib.DrawCircleV(new Vector2(mx, my), 3f, new Color(64, 96, 62, 190));
+                }
                 continue;
             }
 

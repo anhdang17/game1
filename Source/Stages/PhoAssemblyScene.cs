@@ -378,9 +378,9 @@ public sealed class PhoAssemblyScene : IScene
         // Dark modal backdrop overlay
         Raylib.DrawRectangle(0, 0, 1280, 720, Raylib.ColorAlpha(new Color(20, 16, 12, 255), 0.75f));
 
-        // Center bamboo staging tray
+        // Center staging tray styled as Bà An's street-kitchen counter
         Rectangle trayRec = new(100f, 60f, 1080f, 620f);
-        VectorRenderer.DrawRoundedRect(trayRec, 0.05f, new Color(252, 248, 235, 255), HanoiPalette.CartoonOutline, 2.5f);
+        VectorRenderer.DrawKitchenModalPanel(trayRec, _totalTime, HanoiPalette.PhoAwningGreen, HanoiPalette.PhoAwningCream, HanoiPalette.PhoWoodLight);
 
         DrawTitle();
         DrawBatTrangPorcelainBowl(new Vector2(BowlCenterX, BowlCenterY), BowlRadiusX, BowlRadiusY, _engine.CurrentSlots, _totalTime);
