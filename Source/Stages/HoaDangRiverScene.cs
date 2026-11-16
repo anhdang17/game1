@@ -59,13 +59,20 @@ public sealed class HoaDangRiverScene : IScene
     private const float CellSize = 88f;
 
     // Cultural Entity Labels
-    private static readonly Dictionary<string, string> EntityLabels = new()
+    private static readonly Dictionary<string, string> EntityLabels = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "Obj_FlowerRaft",      "Bè hoa sen" },
-        { "Obj_FisherSampan",    "Thuyền chài" },
-        { "Obj_DragonBoat",      "Thuyền rồng" },
-        { "Obj_WaterLilyPatch",  "Bãi hoa sen" },
-        { "Obj_LanternPlatform", "Giàn hoa đăng" }
+        { "Obj_FlowerRaft",        "Bè hoa sen" },
+        { "Obj_FlowerRaft_1",      "Bè hoa sen" },
+        { "Obj_FisherSampan",      "Thuyền chài" },
+        { "Obj_FruitBoat",         "Thuyền chài" },
+        { "Obj_FruitBoat_1",       "Thuyền chài" },
+        { "Obj_DragonBoat",        "Thuyền rồng" },
+        { "Obj_DragonBoat_1",      "Thuyền rồng" },
+        { "Obj_WaterLilyPatch",    "Bãi hoa sen" },
+        { "Obj_LotusCluster",      "Bãi hoa sen" },
+        { "Obj_LotusCluster_1",    "Bãi hoa sen" },
+        { "Obj_LanternPlatform",   "Giàn hoa đăng" },
+        { "Obj_LanternPlatform_1", "Giàn hoa đăng" }
     };
 
     public HoaDangRiverScene(
@@ -441,8 +448,9 @@ public sealed class HoaDangRiverScene : IScene
 
     private GridEntity? GetEntityById(string id)
     {
+        if (string.IsNullOrWhiteSpace(id)) return null;
         foreach (var e in _grid.Entities)
-            if (e.Id == id) return e;
+            if (HoaDangRiverEngine.MatchesId(e.Id, id)) return e;
         return null;
     }
 
@@ -598,19 +606,19 @@ public sealed class HoaDangRiverScene : IScene
             // Movable cultural obstacles
             switch (entity.Id)
             {
-                case "Obj_DragonBoat":
+                case "Obj_DragonBoat" or "Obj_DragonBoat_1":
                     DrawDragonBoat(bounds);
                     break;
-                case "Obj_FlowerRaft":
+                case "Obj_FlowerRaft" or "Obj_FlowerRaft_1":
                     DrawFlowerRaft(bounds);
                     break;
-                case "Obj_FisherSampan":
+                case "Obj_FisherSampan" or "Obj_FruitBoat" or "Obj_FruitBoat_1":
                     DrawFisherSampan(bounds);
                     break;
-                case "Obj_WaterLilyPatch":
+                case "Obj_WaterLilyPatch" or "Obj_LotusCluster" or "Obj_LotusCluster_1":
                     DrawWaterLilyPatch(bounds);
                     break;
-                case "Obj_LanternPlatform":
+                case "Obj_LanternPlatform" or "Obj_LanternPlatform_1":
                     DrawLanternPlatform(bounds);
                     break;
                 default:
@@ -629,29 +637,46 @@ public sealed class HoaDangRiverScene : IScene
 
     private static void DrawDragonBoat(Rectangle r)
     {
-        // 2x1 Royal Dragon Boat (Imperial Red & Gold)
+        // Royal Dragon Boat (Imperial Red & Gold)
         Raylib.DrawRectangleRounded(r, 0.4f, 6, new Color(185, 28, 28, 255));
         Raylib.DrawRectangleLinesEx(r, 2f, new Color(251, 191, 36, 255));
 
-        // Golden dragon prow
-        Vector2 prow = new(r.X + r.Width - 14f, r.Y + r.Height * 0.5f);
-        Raylib.DrawCircleV(prow, 12f, new Color(245, 158, 11, 255));
-        Raylib.DrawCircleV(new Vector2(prow.X + 2f, prow.Y - 2f), 3f, Color.Red);
+        if (r.Height > r.Width)
+        {
+            // Vertical boat (1x2): Dragon prow at top, canopy in center
+            Vector2 prow = new(r.X + r.Width * 0.5f, r.Y + 16f);
+            Raylib.DrawCircleV(prow, 12f, new Color(245, 158, 11, 255));
+            Raylib.DrawCircleV(new Vector2(prow.X, prow.Y - 2f), 3f, Color.Red);
 
-        // Royal canopy
-        Rectangle canopy = new(r.X + 16f, r.Y + 8f, r.Width - 42f, r.Height - 24f);
-        Raylib.DrawRectangleRounded(canopy, 0.3f, 4, new Color(217, 119, 6, 255));
+            Rectangle canopy = new(r.X + 8f, r.Y + 34f, r.Width - 16f, r.Height - 48f);
+            Raylib.DrawRectangleRounded(canopy, 0.3f, 4, new Color(217, 119, 6, 255));
+        }
+        else
+        {
+            // Horizontal boat (2x1): Golden dragon prow on right
+            Vector2 prow = new(r.X + r.Width - 14f, r.Y + r.Height * 0.5f);
+            Raylib.DrawCircleV(prow, 12f, new Color(245, 158, 11, 255));
+            Raylib.DrawCircleV(new Vector2(prow.X + 2f, prow.Y - 2f), 3f, Color.Red);
+
+            Rectangle canopy = new(r.X + 16f, r.Y + 8f, r.Width - 42f, r.Height - 24f);
+            Raylib.DrawRectangleRounded(canopy, 0.3f, 4, new Color(217, 119, 6, 255));
+        }
     }
 
     private static void DrawFlowerRaft(Rectangle r)
     {
-        // 1x2 Bamboo Flower Raft with Lotus lanterns
+        // Bamboo Flower Raft with Lotus lanterns
         Raylib.DrawRectangleRounded(r, 0.35f, 6, new Color(133, 77, 39, 255));
         Raylib.DrawRectangleLinesEx(r, 2f, new Color(217, 180, 118, 255));
 
-        // Lotus lantern atop raft
-        Vector2 l1 = new(r.X + r.Width * 0.5f, r.Y + r.Height * 0.3f);
-        Vector2 l2 = new(r.X + r.Width * 0.5f, r.Y + r.Height * 0.7f);
+        // Lotus lanterns atop raft (distributed along major axis)
+        Vector2 l1 = r.Width > r.Height
+            ? new Vector2(r.X + r.Width * 0.3f, r.Y + r.Height * 0.5f)
+            : new Vector2(r.X + r.Width * 0.5f, r.Y + r.Height * 0.3f);
+        Vector2 l2 = r.Width > r.Height
+            ? new Vector2(r.X + r.Width * 0.7f, r.Y + r.Height * 0.5f)
+            : new Vector2(r.X + r.Width * 0.5f, r.Y + r.Height * 0.7f);
+
         Raylib.DrawCircleV(l1, 14f, new Color(244, 114, 182, 255));
         Raylib.DrawCircleV(l1, 6f, new Color(254, 240, 138, 255));
 
@@ -729,8 +754,8 @@ public sealed class HoaDangRiverScene : IScene
         FontManager.Instance.DrawText("Điều Khiển:", new Vector2(1050f, 160f), 15f, new Color(255, 215, 64, 255));
         FontManager.Instance.DrawText("- Nhấp chuột / 1..5: Chọn thuyền", new Vector2(1050f, 190f), 11f, Color.White);
         FontManager.Instance.DrawText("- Kéo chuột / WASD: Đẩy vật cản", new Vector2(1050f, 210f), 11f, Color.White);
-        FontManager.Instance.DrawText("- Thuyền rồng: Đẩy ngang", new Vector2(1050f, 230f), 11f, new Color(251, 191, 36, 255));
-        FontManager.Instance.DrawText("- Bè hoa sen: Đẩy dọc", new Vector2(1050f, 250f), 11f, new Color(244, 114, 182, 255));
+        FontManager.Instance.DrawText("- Thuyền rồng: Đẩy dọc", new Vector2(1050f, 230f), 11f, new Color(251, 191, 36, 255));
+        FontManager.Instance.DrawText("- Bè hoa sen: Đẩy ngang", new Vector2(1050f, 250f), 11f, new Color(244, 114, 182, 255));
         FontManager.Instance.DrawText("- Thuyền chài: Đẩy 4 hướng", new Vector2(1050f, 270f), 11f, new Color(180, 210, 240, 255));
 
         FontManager.Instance.DrawText($"Số lượt đẩy: {_moveCount}", new Vector2(1050f, 320f), 14f, new Color(255, 235, 130, 255));

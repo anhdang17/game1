@@ -156,26 +156,56 @@ public sealed class HoaDangRiverEngine : IRiverGridEngine, IStallGridEngine
 
     public void ResetPuzzle() => ResetGrid();
 
-    public static bool MatchesId(string entityId, string queryId)
+    public static bool MatchesId(string? entityId, string? queryId)
     {
-        if (string.Equals(entityId, queryId, StringComparison.OrdinalIgnoreCase)) return true;
+        if (string.IsNullOrWhiteSpace(entityId) || string.IsNullOrWhiteSpace(queryId))
+            return false;
 
-        if ((entityId == "Obj_FruitBoat_1" && (queryId == "Obj_FisherSampan" || queryId == "Obj_FruitBoat")) ||
-            (entityId == "Obj_DragonBoat_1" && (queryId == "Obj_FlowerRaft" || queryId == "Obj_DragonBoat")) ||
-            (entityId == "Obj_FlowerRaft_1" && (queryId == "Obj_DragonBoat" || queryId == "Obj_FlowerRaft")) ||
-            (entityId == "Obj_LotusCluster_1" && (queryId == "Obj_WaterLilyPatch" || queryId == "Obj_LotusCluster")))
-        {
+        if (string.Equals(entityId, queryId, StringComparison.OrdinalIgnoreCase))
             return true;
+
+        // Untangled 1-to-1 alias mappings (symmetrical)
+        if ((string.Equals(entityId, "Obj_DragonBoat_1", StringComparison.OrdinalIgnoreCase) && string.Equals(queryId, "Obj_DragonBoat", StringComparison.OrdinalIgnoreCase)) ||
+            (string.Equals(queryId, "Obj_DragonBoat_1", StringComparison.OrdinalIgnoreCase) && string.Equals(entityId, "Obj_DragonBoat", StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        if ((string.Equals(entityId, "Obj_FlowerRaft_1", StringComparison.OrdinalIgnoreCase) && string.Equals(queryId, "Obj_FlowerRaft", StringComparison.OrdinalIgnoreCase)) ||
+            (string.Equals(queryId, "Obj_FlowerRaft_1", StringComparison.OrdinalIgnoreCase) && string.Equals(entityId, "Obj_FlowerRaft", StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        if ((string.Equals(entityId, "Obj_FruitBoat_1", StringComparison.OrdinalIgnoreCase) &&
+             (string.Equals(queryId, "Obj_FruitBoat", StringComparison.OrdinalIgnoreCase) || string.Equals(queryId, "Obj_FisherSampan", StringComparison.OrdinalIgnoreCase))) ||
+            (string.Equals(queryId, "Obj_FruitBoat_1", StringComparison.OrdinalIgnoreCase) &&
+             (string.Equals(entityId, "Obj_FruitBoat", StringComparison.OrdinalIgnoreCase) || string.Equals(entityId, "Obj_FisherSampan", StringComparison.OrdinalIgnoreCase))))
+            return true;
+
+        if ((string.Equals(entityId, "Obj_LotusCluster_1", StringComparison.OrdinalIgnoreCase) &&
+             (string.Equals(queryId, "Obj_LotusCluster", StringComparison.OrdinalIgnoreCase) || string.Equals(queryId, "Obj_WaterLilyPatch", StringComparison.OrdinalIgnoreCase))) ||
+            (string.Equals(queryId, "Obj_LotusCluster_1", StringComparison.OrdinalIgnoreCase) &&
+             (string.Equals(entityId, "Obj_LotusCluster", StringComparison.OrdinalIgnoreCase) || string.Equals(entityId, "Obj_WaterLilyPatch", StringComparison.OrdinalIgnoreCase))))
+            return true;
+
+        // Static embankment bank/pier matching
+        if (entityId.StartsWith("RiverBank_North_", StringComparison.OrdinalIgnoreCase) &&
+            queryId.StartsWith("Pier_North_", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(entityId["RiverBank_North_".Length..], queryId["Pier_North_".Length..], StringComparison.OrdinalIgnoreCase);
+        }
+        if (queryId.StartsWith("RiverBank_North_", StringComparison.OrdinalIgnoreCase) &&
+            entityId.StartsWith("Pier_North_", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(queryId["RiverBank_North_".Length..], entityId["Pier_North_".Length..], StringComparison.OrdinalIgnoreCase);
         }
 
-        if (entityId.StartsWith("RiverBank_North_") && queryId.StartsWith("Pier_North_"))
+        if (entityId.StartsWith("RiverBank_South_", StringComparison.OrdinalIgnoreCase) &&
+            queryId.StartsWith("Pier_South_", StringComparison.OrdinalIgnoreCase))
         {
-            return entityId["RiverBank_North_".Length..] == queryId["Pier_North_".Length..];
+            return string.Equals(entityId["RiverBank_South_".Length..], queryId["Pier_South_".Length..], StringComparison.OrdinalIgnoreCase);
         }
-
-        if (entityId.StartsWith("RiverBank_South_") && queryId.StartsWith("Pier_South_"))
+        if (queryId.StartsWith("RiverBank_South_", StringComparison.OrdinalIgnoreCase) &&
+            entityId.StartsWith("Pier_South_", StringComparison.OrdinalIgnoreCase))
         {
-            return entityId["RiverBank_South_".Length..] == queryId["Pier_South_".Length..];
+            return string.Equals(queryId["RiverBank_South_".Length..], entityId["Pier_South_".Length..], StringComparison.OrdinalIgnoreCase);
         }
 
         return false;
@@ -183,6 +213,8 @@ public sealed class HoaDangRiverEngine : IRiverGridEngine, IStallGridEngine
 
     public bool PushObject(string objectId, Direction direction)
     {
+        if (string.IsNullOrWhiteSpace(objectId)) return false;
+
         var entity = _entities.FirstOrDefault(e => MatchesId(e.Id, objectId));
         if (entity == null || entity.IsStaticWall) return false;
 
